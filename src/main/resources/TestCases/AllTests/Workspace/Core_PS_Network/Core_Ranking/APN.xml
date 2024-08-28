@@ -1,0 +1,556 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<TestCase id="1">
+<Direction>Launch -> Core(PS) Network -> Core Ranking -> APN</Direction>
+<Url><![CDATA[NETWORK/RANKING_ANALYSIS?time={times}&display=grid&type=APN&tzOffset=+0100&maxRows=50]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&type=APN&tzOffset=+0100&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/RANKING_ANALYSIS&maxRows=0]]></CSVUrl>
+<JSONVariables>1:rank,2:apn,3:failures,4:success</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select rank as 'sqlRank', no_of_errors as 'sqlFailures' from (select rank() over (order by no_of_errors Desc) as rank, no_of_errors, apn from (select count(*) as no_of_errors, apn from (select apn from event_e_lte_err_raw where datetime_id >= '2015-03-19 07:00' and datetime_id < '2014-03-09 21:32' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') union all select apn from event_e_sgeh_err_raw where datetime_id >= '2015-03-19 08:00' and datetime_id < '2014-03-09 21:32' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')) rawCount group by apn) unionCount) rankView where apn = '{apn}']]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+<Validate>rank = sqlRank</Validate>
+<Validate><![CDATA[rank <= 50 ]]></Validate>
+<SqlTest success_raw="false" instruction="plus:sgeh"><![CDATA[select sum(no_of_successes) as 'sqlSuccess' from event_e_lte_imsi_suc_raw where apn = '{apn}' and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<SqlTest success_raw="true" instruction="plus:sgeh"><![CDATA[select count(*) as 'sqlSuccess' from event_e_lte_suc_raw where apn = '{apn}' and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>success = sqlSuccess</Validate>
+</RepeatValidation>
+<Validate>sort{rank} = asc</Validate>
+<Validate>sort{failures} = desc</Validate>
+<RepeatDrillDown instruction="all">2</RepeatDrillDown>
+<PassToDrillDown id="2">apn,failures,success</PassToDrillDown>
+</TestCase>
+
+
+<TestCase id="2">
+<Direction>Drill on APN</Direction>
+<MaxValidation>5</MaxValidation>
+<Url><![CDATA[NETWORK/EVENT_ANALYSIS?time={times}&node={1.apn}&type=APN&display=grid&key=SUM&tzOffset=+0100&maxRows=500]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?node={1.apn}&type=APN&display=grid&key=SUM&tzOffset=+0100&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+<JSONVariables>1:apn,2:eventId,3:eventType,4:failures,5:successes,6:totalEvents,7:successRatio,8:impactedSubs</JSONVariables>
+<IgnoredInCsv>2:eventId</IgnoredInCsv>
+<RepeatValidation instruction="all">
+<SqlTest instruction="use:eventId"><![CDATA[select count(*) as 'sqlFailures' from event_e_lte_err_raw where apn = '{1.apn}' and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') and event_id = {eventId}]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+
+<SqlTest success_raw="false" instruction="use:eventId"><![CDATA[select sum(no_of_successes) as 'sqlSuccess' from EVENT_E_LTE_imsi_suc_raw where apn = '{1.apn}' and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and event_id = {eventId} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<SqlTest success_raw="true" instruction="use:eventId"><![CDATA[select count(*) as 'sqlSuccess' from EVENT_E_LTE_suc_raw where apn = '{1.apn}' and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and event_id = {eventId} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>successes = sqlSuccess</Validate>
+
+<SqlTest instruction="use:eventId"><![CDATA[select count(distinct(imsi)) as 'sqlImpacted' from event_e_lte_err_raw where apn = '{apn}' and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and event_id = {eventId} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>impactedSubs = sqlImpacted</Validate>
+
+<Validate>successes + failures = totalEvents</Validate>
+<Validate>( successes / totalEvents ) * 100 = successRatio</Validate>
+</RepeatValidation>
+<Validate>1.failures = sum{failures}</Validate>
+<Validate>1.success = sum{successes}</Validate>
+<RepeatDrillDown instruction="random5">3</RepeatDrillDown>
+<RepeatDrillDown instruction="all">20,21</RepeatDrillDown>
+<PassToDrillDown id="3">apn,failures,successes,eventId</PassToDrillDown>
+<PassToDrillDown id="20">apn,failures</PassToDrillDown>
+<PassToDrillDown id="21">apn,failures</PassToDrillDown>
+</TestCase>
+
+
+<TestCase id="3">
+<MaxValidation>1</MaxValidation>
+<PreCondition>2.failures > 0</PreCondition>
+<Direction>Drill on Failures</Direction>
+<Url><![CDATA[NETWORK/EVENT_ANALYSIS?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=+0100&maxRows=500&key=ERR&type=APN&dataTieredDelay=true&apn={2.apn}&eventID={2.eventId}]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0100&key=ERR&type=APN&dataTieredDelay=true&apn={2.apn}&eventID={2.eventId}&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+<JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventIdDesc,8:eventResDesc,9:causeProtDesc,10:causeCodeID,11:causeCodeDesc,12:subCauseCodeID,13:subCauseCodeDesc,14:SGSNMME,15:ratDesc,16:controller,18:accessArea,19:vendor,57:apn,76:ratId</JSONVariables>
+<IgnoredInCsv>72:causeCode,73:subcauseCode,74:eventResId,75:causeProtId</IgnoredInCsv>
+<RepeatValidation instruction="random20">
+<SqlTest instruction="Use:ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {imsi} and event_time = '{eventTime}' and cause_code = {causeCodeID} and subcause_code = {subCauseCodeID} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac = {tac} and imsi = {imsi} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>tac = sqlTac,SGSNMME = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,2.eventId = sqlEventID,vendor = sqlVendor</Validate>
+</RepeatValidation>
+<SqlTest instruction="use:2.eventId"><![CDATA[select count(*) as 'sqlTotalEvents' from event_e_lte_err_raw where DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') and event_id = {2.eventId} and apn = '{2.apn}']]></SqlTest>
+<Validate>sqlTotalEvents = count{eventTime}</Validate>
+<RepeatDrillDown instruction="random5">4,8,9,11,13</RepeatDrillDown>
+<PassToDrillDown id="4">tac</PassToDrillDown>
+<PassToDrillDown id="8">apn</PassToDrillDown>
+<PassToDrillDown id="9">SGSNMME</PassToDrillDown>
+<PassToDrillDown id="11">vendor,ratId,controller</PassToDrillDown>
+<PassToDrillDown id="13">vendor,ratId,controller,accessArea</PassToDrillDown>
+</TestCase>
+
+
+<!--__________________________________________________________TAC Drill Downs__________________________________________________________-->
+
+
+<TestCase id="4">
+<Direction>Drill on TAC</Direction>
+<Url><![CDATA[NETWORK/EVENT_ANALYSIS?time={times}&display=grid&tzOffset=+0100&maxRows=500&key=SUM&type=TAC&tac={3.tac}]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0100&key=SUM&type=TAC&tac={3.tac}&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+<JSONVariables>1:manuf,2:model,3:tac,4:eventId,5:eventType,6:failures,7:successes,8:totalEvents,9:succRatio,10:impactedSubs</JSONVariables>
+<IgnoredInCsv>4:eventId</IgnoredInCsv>
+<RepeatValidation instruction="all">
+<SqlTest instruction="use:eventId"><![CDATA[select count(*) as 'sqlFailures' from event_e_lte_err_raw where tac = {tac} and event_id = {eventId} and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+<SqlTest instruction="use:eventId"><![CDATA[select sum(no_of_successes) as 'sqlSuccess' from EVENT_E_LTE_MANUF_TAC_EVENTID_SUC_15MIN where tac = {tac} and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and event_id = {eventId} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>successes = sqlSuccess</Validate>
+<SqlTest instruction="use:eventId"><![CDATA[select count(distinct(imsi)) as 'sqlImpacted' from event_e_lte_err_raw where tac = {tac} and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and event_id = {eventId} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>impactedSubs = sqlImpacted</Validate>
+<Validate>successes + failures = totalEvents</Validate>
+<Validate>( successes / totalEvents ) * 100 = succRatio</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="random5">5</RepeatDrillDown>
+<PassToDrillDown id="5">tac,failures,eventId</PassToDrillDown>
+</TestCase>
+
+
+<TestCase id="5">
+<PreCondition>4.failures > 0</PreCondition>
+<Direction>Drill on Failures</Direction>
+<Url><![CDATA[NETWORK/EVENT_ANALYSIS?time={times}&display=grid&tzOffset=+0100&maxRows=500&key=ERR&type=TAC&dataTieredDelay=true&tac={4.tac}&eventID={4.eventId}]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&key=ERR&type=TAC&dataTieredDelay=true&tac={4.tac}&eventID={4.eventId}&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+<JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventIdDesc,8:eventResDesc,9:causeProtDesc,10:causeCodeID,11:causeCodeDesc,12:subCauseCodeID,13:subCauseCodeDesc,14:SGSNMME,15:ratDesc,16:controller,18:accessArea,19:vendor,57:apn,74:eventResId,75:causeProtId,76:ratId</JSONVariables>
+<IgnoredInCsv>72:causeCode,73:subcauseCode,74:eventResId,75:causeProtId</IgnoredInCsv>
+<RepeatValidation instruction="random20">
+<SqlTest instruction="Use:ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {imsi} and event_time = '{eventTime}' and cause_code = {causeCodeID} and subcause_code = {subCauseCodeID} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac = {tac} and imsi = {imsi} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>tac = sqlTac,SGSNMME = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,4.eventId = sqlEventID,vendor = sqlVendor</Validate>
+</RepeatValidation>
+<Validate>4.failures = count{eventTime}</Validate>
+<RepeatDrillDown instruction="all">6</RepeatDrillDown>
+<PassToDrillDown id="6">tac,imsi,eventIdDesc,causeProtDesc,causeCodeDesc,subCauseCodeDesc,causeCodeID,subCauseCodeID,eventResId,causeProtId,ratId,4.eventId</PassToDrillDown>
+</TestCase>
+
+
+<TestCase id="6">
+<Direction>Click on Failure Recurrances</Direction>
+<Url><![CDATA[NETWORK/RECUR_ERR/SUM?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&type=TAC&tac={5.tac}&display=grid&imsiHeader={5.imsi}&eventType={5.eventIdDesc}&causeProtTypeHeader={5.causeProtDesc}&causeCodeHeader={5.causeCodeDesc}&subCauseCodeHeader={5.subCauseCodeDesc}&causeCode={5.causeCodeID}&subCauseCode={5.subCauseCodeID}&eventResult={5.eventResId}&causeProtType={5.causeProtId}&tzOffset=+0100&maxRows=500]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?type=TAC&tac={5.tac}&display=grid&imsiHeader={5.imsi}&eventType={5.eventIdDesc}&causeProtTypeHeader={5.causeProtDesc}&causeCodeHeader={5.causeCodeDesc}&subCauseCodeHeader={5.subCauseCodeDesc}&causeCode={5.causeCodeID}&subCauseCode={5.subCauseCodeID}&eventResult={5.eventResId}&causeProtType={5.causeProtId}&tzOffset=+0000&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/RECUR_ERR/SUM&maxRows=0]]></CSVUrl>
+<JSONVariables>1:eventIdDesc,2:causeProtDesc,3:causeCodeDesc,4:subCauseCodeDesc,5:causeCodeId,6:subCauseCodeId,7:eventResId,8:causeProtId,9:occurances</JSONVariables>
+<IgnoredInCsv>5:causeCodeId,6:subcauseCodeId,7:eventResId,8:causeProtId</IgnoredInCsv>
+<RepeatValidation instruction="all">
+<SqlTest instruction="Use:5.ratId"><![CDATA[select count(*) as 'sqlOccurances' from event_e_lte_err_raw where datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and cause_code = {causeCodeId} and subcause_code = {subCauseCodeId} and CAUSE_PROT_TYPE = {causeProtId} and EVENT_RESULT = {5.eventResId} and event_id = {4.eventId} and imsi = {5.imsi}]]></SqlTest>
+<Validate>occurances = sqlOccurances</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">7</RepeatDrillDown>
+<PassToDrillDown id="7">5.tac,5.imsi,eventIdDesc,causeProtDesc,causeCodeDesc,subCauseCodeDesc,causeCodeId,subCauseCodeId,eventResId,causeProtId,5.ratId,occurances,4.eventId</PassToDrillDown>
+</TestCase>
+
+
+<TestCase id="7">
+<PreCondition>6.occurances > 0</PreCondition>
+<Direction>Click on Occurances</Direction>
+<Url><![CDATA[SUBSCRIBER/RECUR_ERR/TOTAL?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&type=TAC&tac={5.tac}&display=grid&imsiHeader={5.imsi}&eventType={6.eventIdDesc}&causeProtTypeHeader={6.causeProtDesc}&causeCodeHeader={6.causeCodeDesc}&subCauseCodeHeader={6.subCauseCodeDesc}&causeCode={6.causeCodeId}&subCauseCode={6.subCauseCodeId}&eventResult={6.eventResId}&causeProtType={6.causeProtId}&tzOffset=+0100&maxRows=500&eventType={6.eventIdDesc}&causeCode={6.causeCodeId}&subCauseCode={6.subCauseCodeId}&eventResult={6.eventResId}&causeProtType={6.causeProtId}]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?type=TAC&tac={5.tac}&display=grid&imsiHeader={5.imsi}&causeProtTypeHeader={6.causeProtDesc}&causeCodeHeader={6.causeCodeDesc}&subCauseCodeHeader={6.subCauseCodeDesc}&tzOffset=+0000&eventType={6.eventIdDesc}&causeCode={6.causeCodeId}&subCauseCode={6.subCauseCodeId}&eventResult={6.eventResId}&causeProtType={6.causeProtId}&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=SUBSCRIBER/RECUR_ERR/TOTAL&maxRows=0]]></CSVUrl>
+<IgnoredInCsv>70:causeCode,71:subcauseCode,72:eventResId,73:causeProtId</IgnoredInCsv>
+<JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,12:sgsnMme,14:controller,16:accessArea,17:vendor,55:apn,70:causeCodeId,71:subCauseCodeId,72:eventResId,73:causeProtId,74:ratId</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest instruction="Use:5.ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {imsi} and tac = {tac} and event_time = '{eventTime}' and cause_code = {causeCodeId} and subcause_code = {subCauseCodeId} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00']]></SqlTest>
+<Validate>tac = sqlTac,sgsnMme = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,vendor = sqlVendor,4.eventId = sqlEventID</Validate>
+</RepeatValidation>
+<Validate>6.occurances = count{eventTime}</Validate>
+</TestCase>
+
+
+<!--__________________________________________________________APN Drill Downs__________________________________________________________-->
+
+
+<TestCase id="8">
+<Direction>Drill on Apn</Direction>
+<Url><![CDATA[NETWORK/EVENT_ANALYSIS?time={times}&display=grid&tzOffset=+0100&maxRows=500&key=SUM&type=APN&apn={3.apn}]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&key=SUM&type=APN&apn={3.apn}&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+<JSONVariables>1:apn,2:eventId,3:eventIdDesc,4:failures,5:successes,6:totalEvents,7:successRatio,8:impactedSubs</JSONVariables>
+<IgnoredInCsv>2:eventId</IgnoredInCsv>
+<RepeatValidation instruction="all">
+<SqlTest instruction="use:eventId"><![CDATA[select count(*) as 'sqlFailures' from event_e_lte_err_raw where apn = '{apn}' and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') and event_id = {eventId}]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+
+<SqlTest success_raw="false" instruction="use:eventId"><![CDATA[select sum(no_of_successes) as 'sqlSuccess' from EVENT_E_LTE_imsi_suc_raw where apn = '{apn}' and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and event_id = {eventId} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<SqlTest success_raw="true" instruction="use:eventId"><![CDATA[select count(*) as 'sqlSuccess' from EVENT_E_LTE_suc_raw where apn = '{apn}' and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and event_id = {eventId} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>successes = sqlSuccess</Validate>
+
+<SqlTest instruction="use:eventId"><![CDATA[select count(distinct(imsi)) as 'sqlImpacted' from event_e_lte_err_raw where apn = '{apn}' and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and event_id = {eventId} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>impactedSubs = sqlImpacted</Validate>
+
+<Validate>successes + failures = totalEvents</Validate>
+<Validate>( successes / totalEvents ) * 100 = successRatio</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">19</RepeatDrillDown>
+<PassToDrillDown id="19">apn,eventId,failures</PassToDrillDown>
+</TestCase>
+
+
+<TestCase id="19">
+<PreCondition>8.failures > 0</PreCondition>
+<Direction>Drill on Failures</Direction>
+<Url><![CDATA[NETWORK/EVENT_ANALYSIS?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=+0000&maxRows=500&key=ERR&type=APN&dataTieredDelay=true&apn={8.apn}&eventID={8.eventId}]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&key=ERR&type=APN&dataTieredDelay=true&apn={8.apn}&eventID={8.eventId}&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+<JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventIdDesc,8:eventResDesc,9:causeProtDesc,10:causeCodeId,11:causeCodeDesc,12:subcauseCodeId,13:subcauseCodeDesc,14:sgsnMme,15:ratDesc,16:controller,18:accessArea,19:vendor,57:apn,74:eventResId,75:causeProtId,76:ratId</JSONVariables>
+<IgnoredInCsv>72:causeCode,73:subcauseCode,74:eventResId,75:causeProtId</IgnoredInCsv>
+<RepeatValidation instruction="all">
+<SqlTest instruction="Use:ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {imsi} and tac = {tac} and event_time = '{eventTime}' and cause_code = {causeCodeId} and subcause_code = {subcauseCodeId} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>tac = sqlTac,sgsnMme = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,8.eventId = sqlEventID,vendor = sqlVendor</Validate>
+</RepeatValidation>
+<Validate>8.failures = count{eventTime}</Validate>
+</TestCase>
+
+
+<!--__________________________________________________________SGSN-MME Drill Downs__________________________________________________________-->
+
+
+<TestCase id="9">
+<Direction>Drill on SGSN-MME</Direction>
+<Url><![CDATA[NETWORK/EVENT_ANALYSIS?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=+0100&maxRows=500&key=SUM&type=SGSN&sgsn={3.SGSNMME}]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&key=SUM&type=SGSN&sgsn={3.SGSNMME}&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+<JSONVariables>1:sgsnMme,2:eventId,3:eventIdDesc,4:failures,5:successes,6:totalEvents,7:successRatio,8:impactedSubs</JSONVariables>
+<IgnoredInCsv>2:eventId</IgnoredInCsv>
+<RepeatValidation instruction="all">
+<SqlTest instruction="use:eventId"><![CDATA[select count(*) as 'sqlFailures' from event_e_lte_err_raw where event_source_name = '{sgsnMme}' and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') and event_id = {eventId}]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+
+<SqlTest success_raw="false" instruction="use:eventId"><![CDATA[select sum(no_of_successes) as 'sqlSuccess' from EVENT_E_LTE_Imsi_suc_raw where event_source_name = '{sgsnMme}' and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and event_id = {eventId} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<SqlTest success_raw="true" instruction="use:eventId"><![CDATA[select count(*) as 'sqlSuccess' from EVENT_E_LTE_suc_raw where event_source_name = '{sgsnMme}' and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and event_id = {eventId} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>successes = sqlSuccess</Validate>
+
+<SqlTest instruction="use:eventId"><![CDATA[select count(distinct(imsi)) as 'sqlImpacted' from event_e_lte_err_raw where event_source_name = '{sgsnMme}' and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and event_id = {eventId} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>impactedSubs = sqlImpacted</Validate>
+
+<Validate>successes + failures = totalEvents</Validate>
+<Validate>( successes / totalEvents ) * 100 = successRatio</Validate>
+</RepeatValidation>
+<SqlTest instruction="plus:sgeh"><![CDATA[select count(*) as 'sqlTotalFails' from event_e_lte_err_raw where DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') and event_source_name = '{3.SGSNMME}']]></SqlTest>
+<Validate>sqlTotalFails = sum{failures}</Validate>
+<RepeatDrillDown instruction="all">10</RepeatDrillDown>
+<PassToDrillDown id="10">sgsnMme,eventId,failures</PassToDrillDown>
+</TestCase>
+
+
+<TestCase id="10">
+<PreCondition>9.failures > 0</PreCondition>
+<Direction>Drill on Failures</Direction>
+<Url><![CDATA[NETWORK/EVENT_ANALYSIS?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=+0100&maxRows=500&key=ERR&type=SGSN&dataTieredDelay=true&sgsn={9.sgsnMme}&eventID={9.eventId}]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&key=ERR&type=SGSN&dataTieredDelay=true&sgsn={9.sgsnMme}&eventID={9.eventId}&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+<JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventIdDesc,8:eventResDesc,9:causeProtDesc,10:causeCodeID,11:causeCodeDesc,12:subCauseCodeID,13:subCauseCodeDesc,14:SGSNMME,15:ratDesc,16:controller,18:accessArea,19:vendor,57:apn,74:eventResId,75:causeProtId,76:ratId</JSONVariables>
+<IgnoredInCsv>72:causeCode,73:subcauseCode,74:eventResId,75:causeProtId</IgnoredInCsv>
+<RepeatValidation instruction="random10">
+<SqlTest instruction="Use:ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {imsi} and tac = {tac} and event_time = '{eventTime}' and cause_code = {causeCodeID} and subcause_code = {subCauseCodeID} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>tac = sqlTac,SGSNMME = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,9.eventId = sqlEventID,vendor = sqlVendor</Validate>
+</RepeatValidation>
+<Validate>9.failures = count{eventTime}</Validate>
+</TestCase>
+
+
+<!--__________________________________________________________Controller Drill Downs__________________________________________________________-->
+
+
+<TestCase id="11">
+<Direction>Drill on Controller</Direction>
+<Url><![CDATA[NETWORK/EVENT_ANALYSIS?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=+0530&maxRows=500&key=SUM&type=BSC&vendor={3.vendor}&bsc={3.controller}&RAT={3.ratId}]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=-0800&key=SUM&type=BSC&vendor={3.vendor}&bsc={3.controller}&RAT={3.ratId}&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+<JSONVariables>1:ratId,2:vendor,3:controller,4:eventId,5:eventType,6:failures,7:successes,8:totalEvents,9:successRatio,10:impactedSubs</JSONVariables>
+<IgnoredInCsv>4:eventId</IgnoredInCsv>
+<RepeatValidation instruction="all">
+<SqlTest instruction="use:ratId"><![CDATA[select count(*) as 'sqlFailures' from EVENT_E_LTE_ERR_RAW where DATETIME_ID >= '2014-07-02 06:30' and DATETIME_ID < '2014-07-02 07:00' and RAT = {3.ratId} and VENDOR = '{3.vendor}' and HIERARCHY_3 = '{3.controller}' and event_id={eventId} and tac not in (select TAC from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+<SqlTest instruction="use:ratId"><![CDATA[select sum(no_of_successes) as 'sqlSuccess' from EVENT_E_LTE_VEND_HIER3_EVENTID_SUC_15MIN where DATETIME_ID >= '2014-07-02 06:30' and DATETIME_ID < '2014-07-02 07:00' and RAT = {3.ratId} and VENDOR = '{3.vendor}' and HIERARCHY_3 = '{3.controller}' and event_id={eventId}]]></SqlTest>
+<Validate>successes = sqlSuccess</Validate>
+<SqlTest instruction="use:ratId"><![CDATA[select count(distinct(imsi)) as 'sqlImpacted' from EVENT_E_LTE_ERR_RAW where DATETIME_ID >= '2014-07-02 06:30' and DATETIME_ID < '2014-07-02 07:00' and RAT = {3.ratId} and VENDOR = '{3.vendor}' and HIERARCHY_3 = '{3.controller}' and event_id={eventId} and tac not in (select TAC from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>impactedSubs = sqlImpacted</Validate>
+<Validate>sqlFailures + sqlSuccess = totalEvents</Validate>
+<Validate>( sqlSuccess / totalEvents ) * 100 = successRatio</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">12</RepeatDrillDown>
+<PassToDrillDown id="12">ratId,eventId,failures,controller,vendor</PassToDrillDown>
+</TestCase>
+
+
+<TestCase id="12">
+<PreCondition>11.failures > 0</PreCondition>
+<Direction>Drill on Failures</Direction>
+<Url><![CDATA[NETWORK/EVENT_ANALYSIS?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=+0100&maxRows=500&key=ERR&type=BSC&dataTieredDelay=true&RAT={11.ratId}&vendor={11.vendor}&bsc={11.controller}&eventID={11.eventId}]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&key=ERR&type=BSC&dataTieredDelay=true&RAT={11.ratId}&vendor={11.vendor}&bsc={11.controller}&eventID={11.eventId}&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+<JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventIdDesc,8:eventResDesc,9:causeProtDesc,10:causeCodeId,11:causeCodeDesc,12:subcauseCodeId,13:subcauseCodeDesc,14:sgsnMme,15:ratDesc,16:controller,18:accessArea,19:vendor,57:apn,74:eventResId,75:causeProtId,76:ratId</JSONVariables>
+<IgnoredInCsv>72:causeCode,73:subcauseCode,74:eventResId,75:causeProtId</IgnoredInCsv>
+<RepeatValidation instruction="random10">
+<SqlTest instruction="Use:ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {imsi} and tac = {tac} and event_time = '{eventTime}' and cause_code = {causeCodeId} and subcause_code = {subcauseCodeId} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>tac = sqlTac,sgsnMme = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,11.eventId = sqlEventID,vendor = sqlVendor</Validate>
+</RepeatValidation>
+<Validate>11.failures = count{eventTime}</Validate>
+<RepeatDrillDown instruction="all">15</RepeatDrillDown>
+<PassToDrillDown id="15">11.eventId,ratId,controller,vendor,imsi,eventIdDesc,causeProtDesc,causeCodeDesc,subcauseCodeDesc,eventResId,causeProtId,causeCodeId,subcauseCodeId</PassToDrillDown>
+</TestCase>
+
+
+<TestCase id="15">
+<Direction>Click on Failure Recurrances</Direction>
+<Url><![CDATA[NETWORK/RECUR_ERR/SUM?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&type=BSC&vendor={12.vendor}&bsc={12.controller}&RAT={12.ratId}&display=grid&imsiHeader={12.imsi}&eventType={12.eventIdDesc}&causeProtTypeHeader={12.causeProtDesc}&causeCodeHeader={12.causeCodeDesc}&subCauseCodeHeader={12.subcauseCodeDesc}&causeCode={12.causeCodeId}&subCauseCode={12.subcauseCodeId}&eventResult={12.eventResId}&causeProtType={12.causeProtId}&tzOffset=+0100&maxRows=500]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?type=BSC&vendor={12.vendor}&bsc={12.controller}&RAT={12.ratId}&display=grid&imsiHeader={12.imsi}&eventType={12.eventIdDesc}&causeProtTypeHeader={12.causeProtDesc}&causeCodeHeader={12.causeCodeDesc}&subCauseCodeHeader={12.subcauseCodeDesc}&causeCode={12.causeCodeId}&subCauseCode={12.subcauseCodeId}&eventResult={12.eventResId}&causeProtType={12.causeProtId}&tzOffset=+0100&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/RECUR_ERR/SUM&maxRows=0]]></CSVUrl>
+<IgnoredInCsv>5:causeCodeId,6:subcauseCodeId,7:eventResId,8:causeProtId</IgnoredInCsv>
+<JSONVariables>1:eventIdDesc,2:causeProtDesc,3:causeCodeDesc,4:subcauseCodeDesc,5:causeCodeId,6:subcauseCodeId,7:eventResId,8:causeProtId,9:occurances</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest instruction="Use:12.ratId"><![CDATA[select count(*) as 'sqlOccurances' from event_e_lte_err_raw where datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and cause_code = {causeCodeId} and subcause_code = {subcauseCodeId} and CAUSE_PROT_TYPE = {causeProtId} and EVENT_RESULT = {12.eventResId} and event_id = (select event_id from dim_e_lte_eventtype where event_id_desc = '{12.eventIdDesc}') and imsi = {12.imsi}]]></SqlTest>
+<Validate>occurances = sqlOccurances</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">16</RepeatDrillDown>
+<PassToDrillDown id="16">11.eventId,12.imsi,eventIdDesc,causeProtDesc,causeCodeDesc,subcauseCodeDesc,causeCodeId,subcauseCodeId,eventResId,causeProtId,12.ratId,occurances,12.controller,12.vendor</PassToDrillDown>
+</TestCase>
+
+
+<TestCase id="16">
+<PreCondition>15.occurances > 0</PreCondition>
+<Direction>Click on Occurances</Direction>
+<Url><![CDATA[SUBSCRIBER/RECUR_ERR/TOTAL?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&type=BSC&vendor={12.vendor}&bsc={12.controller}&RAT={12.ratId}&display=grid&imsiHeader={12.imsi}&eventType={15.eventIdDesc}&causeProtTypeHeader={15.causeProtDesc}&causeCodeHeader={15.causeCodeDesc}&subCauseCodeHeader={15.subcauseCodeDesc}&causeCode={15.causeCodeId}&subCauseCode={15.subcauseCodeId}&eventResult={15.eventResId}&causeProtType={15.causeProtId}&tzOffset=+0100&maxRows=500&eventType={15.eventIdDesc}&causeCode={15.causeCodeId}&subCauseCode={15.subcauseCodeId}&eventResult={15.eventResId}&causeProtType={15.causeProtId}]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?type=BSC&vendor={12.vendor}&bsc={12.controller}&RAT={12.ratId}&display=grid&imsiHeader={12.imsi}&causeProtTypeHeader={15.causeProtDesc}&causeCodeHeader={15.causeCodeDesc}&subCauseCodeHeader={15.subcauseCodeDesc}&tzOffset=+0100&eventType={15.eventIdDesc}&causeCode={15.causeCodeId}&subCauseCode={15.subcauseCodeId}&eventResult={15.eventResId}&causeProtType={15.causeProtId}&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=SUBSCRIBER/RECUR_ERR/TOTAL&maxRows=0]]></CSVUrl>
+<IgnoredInCsv>70:sysCauseCode,71:sysSubcause,72:sysEventRes,73:sysCauseProt</IgnoredInCsv>
+<JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,12:sgsnMme,14:controller,16:accessArea,17:vendor,55:apn,70:causeCodeId,71:subCauseCodeId,72:eventResId,73:causeProtId,74:ratId</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest instruction="Use:12.ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {imsi} and tac = {tac} and event_time = '{eventTime}' and cause_code = {15.causeCodeId} and subcause_code = {15.subcauseCodeId} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00']]></SqlTest>
+<Validate>tac = sqlTac,sgsnMme = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,vendor = sqlVendor,11.eventId = sqlEventID</Validate>
+</RepeatValidation>
+<Validate>15.occurances = count{eventTime}</Validate>
+</TestCase>
+
+
+<!--__________________________________________________________Access Area Drill Downs__________________________________________________________-->
+
+
+<TestCase id="13">
+<Direction>Drill on Access Area</Direction>
+<Url><![CDATA[NETWORK/EVENT_ANALYSIS?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=+0530&maxRows=500&key=SUM&type=CELL&cell={3.accessArea}&vendor={3.vendor}&bsc={3.controller}&RAT={3.ratId}]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&key=SUM&type=CELL&cell={3.accessArea}&vendor={3.vendor}&bsc={3.controller}&RAT={3.ratId}&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+<JSONVariables>1:ratId,2:vendor,3:controller,4:accessArea,5:eventId,6:eventType,7:failures,8:successes,9:totalEvents,10:succRatio,11:impactedSubs</JSONVariables>
+<IgnoredInCsv>5:eventId</IgnoredInCsv>
+<RepeatValidation instruction="all">
+<SqlTest instruction="use:eventId"><![CDATA[select count(*) as 'sqlFailures' from EVENT_E_SGEH_ERR_RAW where DATETIME_ID >= '2014-07-01 03:30' and DATETIME_ID < '2014-07-01 09:30' and RAT = {3.ratId} and VENDOR = '{3.vendor}' and HIERARCHY_3 = '{3.controller}' and HIERARCHY_1 = '{3.accessArea}' AND EVENT_ID={eventId} and tac not in (select TAC from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+<SqlTest instruction="use:eventId"><![CDATA[Select sum(no_of_successes) as 'sqlSuccesses' from EVENT_E_LTE_VEND_HIER321_EVENTID_SUC_15MIN where vendor = '{vendor}' and hierarchy_1='{accessArea}' and hierarchy_3='{controller}' and rat={ratId}  and event_id = {eventId} and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00']]></SqlTest>
+<Validate>successes = sqlSuccesses</Validate>
+<SqlTest instruction="use:eventId"><![CDATA[select count(distinct(imsi)) as 'sqlImpacted' from EVENT_E_SGEH_ERR_RAW where DATETIME_ID >= '2014-07-01 03:30' and DATETIME_ID < '2014-07-01 09:30' and RAT = {3.ratId} and VENDOR = '{3.vendor}' and HIERARCHY_3 = '{3.controller}' and HIERARCHY_1 = '{3.accessArea}' AND EVENT_ID={eventId} and tac not in (select TAC from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>impactedSubs = sqlImpacted</Validate>
+<Validate>sqlFailures + sqlSuccesses = totalEvents</Validate>
+<Validate>( sqlSuccesses / totalEvents ) * 100 = succRatio</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">14</RepeatDrillDown>
+<PassToDrillDown id="14">accessArea,ratId,controller,vendor,eventId,failures</PassToDrillDown>
+</TestCase>
+
+
+<TestCase id="14">
+<PreCondition>13.failures > 0</PreCondition>
+<Direction>Drill on Failures</Direction>
+<Url><![CDATA[NETWORK/EVENT_ANALYSIS?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=+0530&maxRows=500&key=ERR&type=CELL&dataTieredDelay=true&RAT={13.ratId}&cell={13.accessArea}&bsc={13.controller}&vendor={13.vendor}&eventID={13.eventId}]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&key=ERR&type=CELL&dataTieredDelay=true&RAT={13.ratId}&cell={13.accessArea}&bsc={13.controller}&vendor={13.vendor}&eventID={13.eventId}&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+<JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventIdDesc,8:eventResDesc,9:causeProtDesc,10:causeCodeId,11:causeCodeDesc,12:subcauseCodeId,13:subcauseCodeDesc,14:sgsnMme,15:ratDesc,16:controller,18:accessArea,19:vendor,57:apn,74:eventResId,75:causeProtId,76:ratId</JSONVariables>
+<IgnoredInCsv>72:causeCode,73:subcauseCode,74:eventResId,75:causeProtId</IgnoredInCsv>
+<RepeatValidation instruction="all">
+<SqlTest instruction="Use:ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {imsi} and tac = {tac} and event_time = '{eventTime}' and cause_code = {causeCodeId} and subcause_code = {subcauseCodeId} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>tac = sqlTac,sgsnMme = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,13.eventId = sqlEventID,vendor = sqlVendor</Validate>
+</RepeatValidation>
+<Validate>13.failures = count{eventTime}</Validate>
+<RepeatDrillDown instruction="all">17</RepeatDrillDown>
+<PassToDrillDown id="17">13.eventId,ratId,controller,vendor,imsi,eventIdDesc,causeProtDesc,causeCodeDesc,subcauseCodeDesc,eventResId,causeProtId,causeCodeId,subcauseCodeId,accessArea</PassToDrillDown>
+</TestCase>
+
+
+<TestCase id="17">
+<Direction>Click on Failure Recurrances</Direction>
+<Url><![CDATA[NETWORK/RECUR_ERR/SUM?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&type=CELL&cell={14.accessArea}&vendor={14.vendor}&bsc={14.controller}&RAT={14.ratId}&display=grid&imsiHeader={14.imsi}&eventType={14.eventIdDesc}&causeProtTypeHeader={14.causeProtDesc}&causeCodeHeader={14.causeCodeDesc}&subCauseCodeHeader={14.subcauseCodeDesc}&causeCode={14.causeCodeId}&subCauseCode={14.subcauseCodeId}&eventResult={14.eventResId}&causeProtType={14.causeProtId}&tzOffset=+0100&maxRows=500]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?type=CELL&cell={14.accessArea}&vendor={14.vendor}&bsc={14.controller}&RAT={14.ratId}&display=grid&imsiHeader={14.imsi}&eventType={14.eventIdDesc}&causeProtTypeHeader={14.causeProtDesc}&causeCodeHeader={14.causeCodeDesc}&subCauseCodeHeader={14.subcauseCodeDesc}&causeCode={14.causeCodeId}&subCauseCode={14.subcauseCodeId}&eventResult={14.eventResId}&causeProtType={14.causeProtId}&tzOffset=+0100&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/RECUR_ERR/SUM&maxRows=0]]></CSVUrl>
+<JSONVariables>1:eventIdDesc,2:causeProtDesc,3:causeCodeDesc,4:subcauseCodeDesc,5:causeCodeId,6:subcauseCodeId,7:eventResId,8:causeProtId,9:occurances</JSONVariables>
+<IgnoredInCsv>5:causeCodeId,6:subcauseCodeId,7:eventResId,8:causeProtId</IgnoredInCsv>
+<RepeatValidation instruction="all">
+<SqlTest instruction="Use:14.ratId"><![CDATA[select count(*) as 'sqlOccurances' from event_e_lte_err_raw where datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and cause_code = {causeCodeId} and subcause_code = {subcauseCodeId} and CAUSE_PROT_TYPE = {causeProtId} and EVENT_RESULT = {14.eventResId} and event_id = (select event_id from dim_e_lte_eventtype where event_id_desc = '{14.eventIdDesc}') and imsi = {14.imsi}]]></SqlTest>
+<Validate>occurances = sqlOccurances</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">18</RepeatDrillDown>
+<PassToDrillDown id="18">13.eventId,14.imsi,eventIdDesc,causeProtDesc,causeCodeDesc,subcauseCodeDesc,causeCodeId,subcauseCodeId,eventResId,causeProtId,14.ratId,occurances,14.controller,14.vendor,14.accessArea</PassToDrillDown>
+</TestCase>
+
+
+<TestCase id="18">
+<PreCondition>17.occurances > 0</PreCondition>
+<Direction>Click on Occurances</Direction>
+<Url><![CDATA[SUBSCRIBER/RECUR_ERR/TOTAL?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&type=CELL&cell={14.accessArea}&vendor={14.vendor}&bsc={14.controller}&RAT={14.ratId}&display=grid&imsiHeader={14.imsi}&eventType={17.eventIdDesc}&causeProtTypeHeader={17.causeProtDesc}&causeCodeHeader={17.causeCodeDesc}&subCauseCodeHeader={17.subcauseCodeDesc}&causeCode={17.causeCodeId}&subCauseCode={17.subcauseCodeId}&eventResult={17.eventResId}&causeProtType={17.causeProtId}&tzOffset=+0100&maxRows=500&eventType={17.eventIdDesc}&causeCode={17.causeCodeId}&subCauseCode={17.subcauseCodeId}&eventResult={17.eventResId}&causeProtType={17.causeProtId}]]></Url>
+<!-- CSVUrl><![CDATA[EniqEventsCSV.jsp?type=CELL&cell={14.accessArea}&vendor={14.vendor}&bsc={14.controller}&RAT={14.ratId}&display=grid&imsiHeader={14.imsi}&causeProtTypeHeader={17.causeProtDesc}&causeCodeHeader={17.causeCodeDesc}&subCauseCodeHeader={17.subcauseCodeDesc}&tzOffset=+0100&eventType={17.eventIdDesc}&causeCode={17.causeCodeId}&subCauseCode={17.causeCodeId}&eventResult={17.eventResId}&causeProtType={17.causeProtId}&dataTimeFrom=1416150300000&dataTimeTo=1416157500000&userName=admin&url=SUBSCRIBER/RECUR_ERR/TOTAL&maxRows=0]]></CSVUrl -->
+<!-- IgnoredInCsv>70:sysCauseCode,71:sysSubcause,72:sysEventRes,73:sysCauseProt</IgnoredInCsv -->
+<JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,12:sgsnMme,14:controller,16:accessArea,17:vendor,55:apn,70:causeCodeId,71:subCauseCodeId,72:eventResId,73:causeProtId,74:ratId</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest instruction="Use:14.ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {14.imsi} and tac = {tac} and event_time = '{eventTime}' and cause_code = {17.causeCodeId} and subcause_code = {17.subcauseCodeId} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and tac = {tac} and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00']]></SqlTest>
+<Validate>tac = sqlTac,sgsnMme = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,vendor = sqlVendor,13.eventId = sqlEventID</Validate>
+</RepeatValidation>
+<Validate>17.occurances = count{eventTime}</Validate>
+</TestCase>
+
+
+<!--__________________________________________________________KPI ICON__________________________________________________________-->
+
+
+<TestCase id="20">
+<Direction>Click on KPI Icon</Direction>
+<PreCondition>2.failures > 0</PreCondition>
+<Url><![CDATA[NETWORK/KPI?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&node={2.apn}&type=APN&display=grid&tzOffset=+0100&maxRows=500]]></Url>
+<JSONVariables>1:kpiTime,2:AttachSR,3:PDPContextActivationSR,4:RAUpdateSR,5:InterSGSNMMERAUpdateSR,6:PDPContextCutoffRatio,7:DetachSR,8:ServiceRequestFR,9:PagingFR,10:PagingAttemptsPerSub,11:ImpactedSubscribers,12:AttachSRLTE,13:PDNConnectionSR,14:ImpactedSubscribersLTE,15:BearerActivationSR,16:UEInitiatedServiceRequestFRLTE,17:PagingFRLTE,18:TrackingAreaUpdateSR,19:InterMMETrackingAreaUpdateSR,20:XTwoBasedHandover,21:XTwoBasedHOWithoutSGWRelocation,22:XTwoBasedHOWithSGWRelocation,23:SOneBasedHandover,24:SOneBasedHOWithoutSGWAndWithMMERelocation,25:SOneBasedHOWithoutSGWAndMMERelocation,26:SOneBasedHOWithSGWAndWithoutMMERelocation,27:SOneBasedHOWithSGWAndMMERelocation</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlAttachSuccessRate' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 0 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_SGEH_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 0 ) AS suc ]]></SqlTest>
+<Validate>AttachSR = sqlAttachSuccessRate</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlPDPContextActivationSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 1 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_SGEH_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 1 ) AS suc ]]></SqlTest>
+<Validate>PDPContextActivationSR = sqlPDPContextActivationSR</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlRAUpdateSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 2 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_SGEH_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 2 ) AS suc ]]></SqlTest>
+<Validate>RAUpdateSR = sqlRAUpdateSR</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlInterSGSNMMERAUpdateSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 3 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_SGEH_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 3) AS suc ]]></SqlTest>
+<Validate>InterSGSNMMERAUpdateSR = sqlInterSGSNMMERAUpdateSR</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100*ISNULL(CAST(INIT_SUC_DEACTIVATION_COUNT + INIT_ERR_DEACTIVATION_EVENT_COUNT AS DECIMAL(16))/(TOTAL_SUC_DEACTIVATION_EVENT_COUNT + TOTAL_ERR_DEACTIVATION_EVENT_COUNT),0),2)  AS NUMERIC(18,2)) AS 'sqlPDPContextCutoffRatio' FROM ( SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS TOTAL_SUC_DEACTIVATION_EVENT_COUNT, ISNULL(SUM(NO_OF_NET_INIT_DEACTIVATES),0) AS INIT_SUC_DEACTIVATION_COUNT FROM EVENT_E_SGEH_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 4 ) AS suc, ( SELECT ISNULL(COUNT(*),0) AS TOTAL_ERR_DEACTIVATION_EVENT_COUNT FROM Event_E_sgeh_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 4 AND ISNULL(TAC,-1) NOT IN ( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC')) AS err1, (SELECT ISNULL(COUNT(*),0) AS INIT_ERR_DEACTIVATION_EVENT_COUNT FROM Event_E_sgeh_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 4 AND DEACTIVATION_TRIGGER != 1 AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC')) AS err2]]></SqlTest>
+<Validate>PDPContextCutoffRatio = sqlPDPContextCutoffRatio</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlDetachSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 14 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_SGEH_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 14 ) AS suc ]]></SqlTest>
+<Validate>DetachSR = sqlDetachSR</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(ERR_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlServiceRequestFR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 15 AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_SGEH_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 15 ) AS suc]]></SqlTest>
+<Validate>ServiceRequestFR = sqlServiceRequestFR</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(ERR_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlPagingFR' FROM ( SELECT ISNULL(SUM(PAGING_ATTEMPTS),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 15 AND PAGING_ATTEMPTS > 0 AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_PAGING_ATTEMPTS),0) AS SUC_COUNT FROM EVENT_E_SGEH_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 15 AND NO_OF_PAGING_ATTEMPTS > 0 ) AS suc]]></SqlTest>
+<Validate>PagingFR = sqlPagingFR</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(CAST(ERR_PAGING_ATTEMPTS AS DECIMAL(16))/ERR_UNIQUE_SUBSCRIBERS,2) AS NUMERIC(18,2)) AS 'sqlPagingAttemptsPerSub' FROM ( SELECT ISNULL(COUNT(DISTINCT IMSI),0) AS ERR_UNIQUE_SUBSCRIBERS, ISNULL(SUM(PAGING_ATTEMPTS),0) AS ERR_PAGING_ATTEMPTS FROM Event_E_sgeh_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err]]></SqlTest>
+<Validate>PagingAttemptsPerSub = sqlPagingAttemptsPerSub</Validate>
+
+<SqlTest><![CDATA[SELECT COUNT(DISTINCT IMSI) AS 'sqlImpactedSubscribers' FROM Event_E_sgeh_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>ImpactedSubscribers = sqlImpactedSubscribers</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlAttachSuccessRateLTE' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 5 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 5  ) AS suc ]]></SqlTest>
+<Validate>AttachSRLTE = sqlAttachSuccessRateLTE</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlPDNConnectionSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 11 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 11  ) AS suc ]]></SqlTest>
+<Validate>PDNConnectionSR = sqlPDNConnectionSR</Validate>
+
+<SqlTest><![CDATA[SELECT ISNULL(COUNT(DISTINCT IMSI),0) AS 'sqlImpactedSubscribersLTE' FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>ImpactedSubscribersLTE = sqlImpactedSubscribersLTE</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlBearerActivationSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 9 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 9  ) AS suc ]]></SqlTest>
+<Validate>BearerActivationSR = sqlBearerActivationSR</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(CAST(ERR_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)*100,2) AS NUMERIC(18,2)) AS 'sqlUEInitiatedServiceRequestFRLTE' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 13 AND PAGING_ATTEMPTS = 0 AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 13 AND NO_OF_PAGING_ATTEMPTS = 0 ) AS suc]]></SqlTest>
+<Validate>UEInitiatedServiceRequestFRLTE = sqlUEInitiatedServiceRequestFRLTE</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(CAST(ERR_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)*100,2) AS NUMERIC(18,2)) AS 'sqlPagingFRLTE' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 13 AND PAGING_ATTEMPTS > 0 AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 13 AND NO_OF_PAGING_ATTEMPTS > 0 ) AS suc]]></SqlTest>
+<Validate>PagingFRLTE = sqlPagingFRLTE</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlTrackingAreaUpdateSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 8 AND EVENT_SUBTYPE_ID = 1 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 8 AND EVENT_SUBTYPE_ID = 1  ) AS suc ]]></SqlTest>
+<Validate>TrackingAreaUpdateSR = sqlTrackingAreaUpdateSR</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlInterMMETrackingAreaUpdateSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 8 AND EVENT_SUBTYPE_ID = 0 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 8 AND EVENT_SUBTYPE_ID = 0  ) AS suc ]]></SqlTest>
+<Validate>InterMMETrackingAreaUpdateSR = sqlInterMMETrackingAreaUpdateSR</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlXTwoBasedHandover' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 2 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 2  ) AS suc ]]></SqlTest>
+<Validate>XTwoBasedHandover = sqlXTwoBasedHandover</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlXTwoBasedHOWithoutSGWRelocation' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 1 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 1  ) AS suc ]]></SqlTest>
+<Validate>XTwoBasedHOWithoutSGWRelocation = sqlXTwoBasedHOWithoutSGWRelocation</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlXTwoBasedHOWithSGWRelocation' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 0 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 0  ) AS suc ]]></SqlTest>
+<Validate>XTwoBasedHOWithSGWRelocation = sqlXTwoBasedHOWithSGWRelocation</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlSOneBasedHandover' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 7 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 7  ) AS suc ]]></SqlTest>
+<Validate>SOneBasedHandover = sqlSOneBasedHandover</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlSOneBasedHOWithoutSGWAndWithMMERelocation' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 6 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 6  ) AS suc ]]></SqlTest>
+<Validate>SOneBasedHOWithoutSGWAndWithMMERelocation = sqlSOneBasedHOWithoutSGWAndWithMMERelocation</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlSOneBasedHOWithoutSGWAndMMERelocation' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 4 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 4  ) AS suc ]]></SqlTest>
+<Validate>SOneBasedHOWithoutSGWAndMMERelocation = sqlSOneBasedHOWithoutSGWAndMMERelocation</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlSOneBasedHOWithSGWAndWithoutMMERelocation' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 5 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 5  ) AS suc ]]></SqlTest>
+<Validate>SOneBasedHOWithSGWAndWithoutMMERelocation = sqlSOneBasedHOWithSGWAndWithoutMMERelocation</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlSOneBasedHOWithSGWAndMMERelocation' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 3 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 3  ) AS suc ]]></SqlTest>
+<Validate>SOneBasedHOWithSGWAndMMERelocation = sqlSOneBasedHOWithSGWAndMMERelocation</Validate>
+</RepeatValidation>
+<Validate>sort{kpiTime} = asc</Validate>
+</TestCase>
+
+
+<TestCase id="21">
+<Direction>Click on KPI Icon</Direction>
+<PreCondition>2.failures > 0</PreCondition>
+<Url><![CDATA[NETWORK/KPI?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&node={2.apn}&type=APN&display=chart&tzOffset=+0100&maxRows=500]]></Url>
+<JSONVariables>1:kpiTime,2:AttachSR,3:PDPContextActivationSR,4:RAUpdateSR,5:InterSGSNMMERAUpdateSR,6:PDPContextCutoffRatio,7:DetachSR,8:ServiceRequestFR,9:PagingFR,10:PagingAttemptsPerSub,11:ImpactedSubscribers,12:AttachSRLTE,13:PDNConnectionSR,14:ImpactedSubscribersLTE,15:BearerActivationSR,16:UEInitiatedServiceRequestFRLTE,17:PagingFRLTE,18:TrackingAreaUpdateSR,19:InterMMETrackingAreaUpdateSR,20:XTwoBasedHandover,21:XTwoBasedHOWithoutSGWRelocation,22:XTwoBasedHOWithSGWRelocation,23:SOneBasedHandover,24:SOneBasedHOWithoutSGWAndWithMMERelocation,25:SOneBasedHOWithoutSGWAndMMERelocation,26:SOneBasedHOWithSGWAndWithoutMMERelocation,27:SOneBasedHOWithSGWAndMMERelocation</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlAttachSuccessRate' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 0 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_SGEH_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 0 ) AS suc ]]></SqlTest>
+<Validate>AttachSR = sqlAttachSuccessRate</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlPDPContextActivationSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 1 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_SGEH_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 1 ) AS suc ]]></SqlTest>
+<Validate>PDPContextActivationSR = sqlPDPContextActivationSR</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlRAUpdateSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 2 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_SGEH_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 2 ) AS suc ]]></SqlTest>
+<Validate>RAUpdateSR = sqlRAUpdateSR</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlInterSGSNMMERAUpdateSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 3 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_SGEH_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 3) AS suc ]]></SqlTest>
+<Validate>InterSGSNMMERAUpdateSR = sqlInterSGSNMMERAUpdateSR</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100*ISNULL(CAST(INIT_SUC_DEACTIVATION_COUNT + INIT_ERR_DEACTIVATION_EVENT_COUNT AS DECIMAL(16))/(TOTAL_SUC_DEACTIVATION_EVENT_COUNT + TOTAL_ERR_DEACTIVATION_EVENT_COUNT),0),2)  AS NUMERIC(18,2)) AS 'sqlPDPContextCutoffRatio' FROM ( SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS TOTAL_SUC_DEACTIVATION_EVENT_COUNT, ISNULL(SUM(NO_OF_NET_INIT_DEACTIVATES),0) AS INIT_SUC_DEACTIVATION_COUNT FROM EVENT_E_SGEH_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 4 ) AS suc, ( SELECT ISNULL(COUNT(*),0) AS TOTAL_ERR_DEACTIVATION_EVENT_COUNT FROM Event_E_sgeh_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 4 AND ISNULL(TAC,-1) NOT IN ( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC')) AS err1, (SELECT ISNULL(COUNT(*),0) AS INIT_ERR_DEACTIVATION_EVENT_COUNT FROM Event_E_sgeh_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 4 AND DEACTIVATION_TRIGGER != 1 AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC')) AS err2]]></SqlTest>
+<Validate>PDPContextCutoffRatio = sqlPDPContextCutoffRatio</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlDetachSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 14 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_SGEH_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 14 ) AS suc ]]></SqlTest>
+<Validate>DetachSR = sqlDetachSR</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(ERR_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlServiceRequestFR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 15 AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_SGEH_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 15 ) AS suc]]></SqlTest>
+<Validate>ServiceRequestFR = sqlServiceRequestFR</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(ERR_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlPagingFR' FROM ( SELECT ISNULL(SUM(PAGING_ATTEMPTS),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 15 AND PAGING_ATTEMPTS > 0 AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_PAGING_ATTEMPTS),0) AS SUC_COUNT FROM EVENT_E_SGEH_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 15 AND NO_OF_PAGING_ATTEMPTS > 0 ) AS suc]]></SqlTest>
+<Validate>PagingFR = sqlPagingFR</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(CAST(ERR_PAGING_ATTEMPTS AS DECIMAL(16))/ERR_UNIQUE_SUBSCRIBERS,2) AS NUMERIC(18,2)) AS 'sqlPagingAttemptsPerSub' FROM ( SELECT ISNULL(COUNT(DISTINCT IMSI),0) AS ERR_UNIQUE_SUBSCRIBERS, ISNULL(SUM(PAGING_ATTEMPTS),0) AS ERR_PAGING_ATTEMPTS FROM Event_E_sgeh_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err]]></SqlTest>
+<Validate>PagingAttemptsPerSub = sqlPagingAttemptsPerSub</Validate>
+
+<SqlTest><![CDATA[SELECT COUNT(DISTINCT IMSI) AS 'sqlImpactedSubscribers' FROM Event_E_sgeh_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>ImpactedSubscribers = sqlImpactedSubscribers</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlAttachSuccessRateLTE' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 5 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 5  ) AS suc ]]></SqlTest>
+<Validate>AttachSRLTE = sqlAttachSuccessRateLTE</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlPDNConnectionSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 11 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 11  ) AS suc ]]></SqlTest>
+<Validate>PDNConnectionSR = sqlPDNConnectionSR</Validate>
+
+<SqlTest><![CDATA[SELECT ISNULL(COUNT(DISTINCT IMSI),0) AS 'sqlImpactedSubscribersLTE' FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>ImpactedSubscribersLTE = sqlImpactedSubscribersLTE</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlBearerActivationSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 9 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 9  ) AS suc ]]></SqlTest>
+<Validate>BearerActivationSR = sqlBearerActivationSR</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(CAST(ERR_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)*100,2) AS NUMERIC(18,2)) AS 'sqlUEInitiatedServiceRequestFRLTE' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 13 AND PAGING_ATTEMPTS = 0 AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 13 AND NO_OF_PAGING_ATTEMPTS = 0 ) AS suc]]></SqlTest>
+<Validate>UEInitiatedServiceRequestFRLTE = sqlUEInitiatedServiceRequestFRLTE</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(CAST(ERR_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)*100,2) AS NUMERIC(18,2)) AS 'sqlPagingFRLTE' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 13 AND PAGING_ATTEMPTS > 0 AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 13 AND NO_OF_PAGING_ATTEMPTS > 0 ) AS suc]]></SqlTest>
+<Validate>PagingFRLTE = sqlPagingFRLTE</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlTrackingAreaUpdateSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 8 AND EVENT_SUBTYPE_ID = 1 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 8 AND EVENT_SUBTYPE_ID = 1  ) AS suc ]]></SqlTest>
+<Validate>TrackingAreaUpdateSR = sqlTrackingAreaUpdateSR</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlInterMMETrackingAreaUpdateSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 8 AND EVENT_SUBTYPE_ID = 0 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 8 AND EVENT_SUBTYPE_ID = 0  ) AS suc ]]></SqlTest>
+<Validate>InterMMETrackingAreaUpdateSR = sqlInterMMETrackingAreaUpdateSR</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlXTwoBasedHandover' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 2 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 2  ) AS suc ]]></SqlTest>
+<Validate>XTwoBasedHandover = sqlXTwoBasedHandover</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlXTwoBasedHOWithoutSGWRelocation' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 1 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 1  ) AS suc ]]></SqlTest>
+<Validate>XTwoBasedHOWithoutSGWRelocation = sqlXTwoBasedHOWithoutSGWRelocation</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlXTwoBasedHOWithSGWRelocation' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 0 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 0  ) AS suc ]]></SqlTest>
+<Validate>XTwoBasedHOWithSGWRelocation = sqlXTwoBasedHOWithSGWRelocation</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlSOneBasedHandover' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 7 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 7  ) AS suc ]]></SqlTest>
+<Validate>SOneBasedHandover = sqlSOneBasedHandover</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlSOneBasedHOWithoutSGWAndWithMMERelocation' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 6 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 6  ) AS suc ]]></SqlTest>
+<Validate>SOneBasedHOWithoutSGWAndWithMMERelocation = sqlSOneBasedHOWithoutSGWAndWithMMERelocation</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlSOneBasedHOWithoutSGWAndMMERelocation' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 4 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 4  ) AS suc ]]></SqlTest>
+<Validate>SOneBasedHOWithoutSGWAndMMERelocation = sqlSOneBasedHOWithoutSGWAndMMERelocation</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlSOneBasedHOWithSGWAndWithoutMMERelocation' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 5 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 5  ) AS suc ]]></SqlTest>
+<Validate>SOneBasedHOWithSGWAndWithoutMMERelocation = sqlSOneBasedHOWithSGWAndWithoutMMERelocation</Validate>
+
+<SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(18,2)) AS 'sqlSOneBasedHOWithSGWAndMMERelocation' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_lte_err_raw WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 3 AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(SUM(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_LTE_APN_EVENTID_EVNTSRC_SUC_15MIN WHERE {kpiTime} AND APN = '{2.apn}' AND EVENT_ID = 7 AND EVENT_SUBTYPE_ID = 3  ) AS suc ]]></SqlTest>
+<Validate>SOneBasedHOWithSGWAndMMERelocation = sqlSOneBasedHOWithSGWAndMMERelocation</Validate>
+</RepeatValidation>
+</TestCase>
+</TestSuite>

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<TestCase id="1">
+   <Direction>Launch -> Controller -> Single Cell -> RTT Server -> Map</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/USER_PLANE/KPI_MAP?node={-master-RttServerAccessAreaNode}&type=CELL&time={time}&tzOffset=+0000]]></Url>
+   <JSONVariables>rncName:controller,vendor:vendor,kpis.RTT Server:PL,cellName:cellId</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[SELECT CAST(ISNULL(ROUND(AVG(SETUP_TIME_NET),4),0) AS NUMERIC(16,4)) AS 'sqlRTT' FROM dc.EVENT_E_USER_PLANE_TCP_RAW WHERE FIVE_MIN_AGG_TIME >= '2014-12-01 08:00' AND FIVE_MIN_AGG_TIME < '2014-12-01 08:15'
+   AND HIER321_ID IN (SELECT HIER321_ID FROM DIM_E_SGEH_HIER321_CELL WHERE CELL_ID = '{cellId}') AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+   <Validate precision="12">PL = sqlRTT</Validate>
+   </RepeatValidation>
+   <RepeatDrillDown instruction="all">2</RepeatDrillDown>
+   <PassToDrillDown id="2">controller,vendor,cellId</PassToDrillDown>
+</TestCase>
+
+<TestCase id="2">
+   <Direction>Chart</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/USER_PLANE/KPI_CHART?time={time}&tzOffset=+0000&node={-master-RttServerAccessAreaNode}&type=CELL]]></Url>
+   <JSONVariables>kpiTime:kpiTimeInMilliseconds,kpiTime:fiveMinAggTime,kpiTime:fiveMinDateTime,RTT Server:RTTTotal,RTT Server Samples:RTTTotalSample</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[SELECT CAST(ISNULL(ROUND(AVG(SETUP_TIME_NET),4),0) AS NUMERIC(16,4))  AS 'sqlRTT', COUNT(SETUP_TIME_NET) AS 'sqlRTTSAMPLE' FROM dc.EVENT_E_USER_PLANE_TCP_RAW WHERE {fiveMinAggTime}  AND ISNULL(TAC,-1) NOT IN(SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') AND HIER321_ID in (Select distinct HIER321_ID from DIM_E_SGEH_HIER321 where HIERARCHY_3 = '{1.controller}' AND VENDOR='{1.vendor}' AND HIERARCHY_1 IN (SELECT HIERARCHY_1 FROM DIM_E_SGEH_HIER321_CELL WHERE CELL_ID = '{1.cellId}') AND rat = 1)]]></SqlTest>
+   <Validate precision="4">RTTTotal = sqlRTT,RTTTotalSample = sqlRTTSAMPLE</Validate>
+   </RepeatValidation>
+   <RepeatDrillDown instruction="all">3,4,5,6</RepeatDrillDown>
+   <PassToDrillDown id="3">kpiTimeInMilliseconds,fiveMinAggTime,fiveMinDateTime,1.controller,1.vendor,1.cellId</PassToDrillDown>
+   <PassToDrillDown id="4">kpiTimeInMilliseconds,fiveMinAggTime,fiveMinDateTime,1.controller,1.vendor,1.cellId</PassToDrillDown>
+   <PassToDrillDown id="5">kpiTimeInMilliseconds,fiveMinAggTime,fiveMinDateTime,1.controller,1.vendor,1.cellId</PassToDrillDown>
+   <PassToDrillDown id="6">kpiTimeInMilliseconds,fiveMinAggTime,fiveMinDateTime,1.controller,1.vendor,1.cellId</PassToDrillDown>
+   <Validate>sort{kpiTimeInMilliseconds} = asc</Validate>
+</TestCase>
+
+
+<TestCase id="3">
+   <PreConditionSql><![CDATA[select count(*) as 'sqlCount' from EVENT_E_RAN_SESSION_RAW where {2.fiveMinDateTime}]]></PreConditionSql>
+   <PreCondition><![CDATA[sqlCount > 0]]></PreCondition>
+   <Direction>Chart By Options -> RSCP</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/USER_PLANE/KPI_CHART/KPI_DRILL?time={time}&kpiStartTime={2.kpiTimeInMilliseconds}&tzOffset=+0000&node={-master-RttServerAccessAreaNode}&type=CELL&drilltype=RSCP_AVG&kpiId=3]]></Url>
+   <JSONVariables>DrillBy:RSCP,Value:RTT,Samples:RTTSample</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[SELECT CAST(ISNULL(ROUND(AVG(SETUP_TIME_NET),4),0) AS NUMERIC(16,4))  AS 'sqlRTT', COUNT(SETUP_TIME_NET) AS 'sqlRTTSAMPLE' FROM EVENT_E_USER_PLANE_TCP_RAW a, EVENT_E_RAN_SESSION_RAW b WHERE a.HIER321_ID = b.START_HIER321_ID AND a.IMSI = b.IMSI
+   AND a.HIER3_ID IS NOT NULL AND a.{2.fiveMinAggTime} AND b.{2.fiveMinDateTime} AND RSCP_AVG = {RSCP} AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC')
+   AND a.HIER321_ID IN (SELECT DISTINCT HIER321_ID FROM DIM_E_SGEH_HIER321 WHERE HIERARCHY_3 = '{1.controller}' AND VENDOR='{1.vendor}' AND HIERARCHY_1 IN (SELECT HIERARCHY_1 FROM DIM_E_SGEH_HIER321_CELL WHERE CELL_ID = '{1.cellId}'))]]></SqlTest>
+   <Validate precision="4">RTT = sqlRTT,RTTSample = sqlRTTSAMPLE</Validate>
+   </RepeatValidation>
+</TestCase>
+
+<TestCase id="4">
+   <PreConditionSql><![CDATA[select count(*) as 'sqlCount' from EVENT_E_RAN_SESSION_RAW where {2.fiveMinDateTime}]]></PreConditionSql>
+   <PreCondition><![CDATA[sqlCount > 0]]></PreCondition>
+   <Direction>Chart By Options -> EcNo</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/USER_PLANE/KPI_CHART/KPI_DRILL?time={time}&kpiStartTime={2.kpiTimeInMilliseconds}&tzOffset=+0000&node={-master-RttServerAccessAreaNode}&type=CELL&drilltype=ECNO_AVG&kpiId=3]]></Url>
+   <JSONVariables>DrillBy:ECNO,Value:RTT,Samples:RTTSample</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[SELECT CAST(ISNULL(ROUND(AVG(SETUP_TIME_NET),4),0) AS NUMERIC(16,4))   AS 'sqlRTT', COUNT(SETUP_TIME_NET) AS 'sqlRTTSAMPLE' FROM EVENT_E_USER_PLANE_TCP_RAW a, EVENT_E_RAN_SESSION_RAW b WHERE a.HIER321_ID = b.START_HIER321_ID AND a.IMSI = b.IMSI
+   AND a.HIER3_ID IS NOT NULL AND a.{2.fiveMinAggTime} AND b.{2.fiveMinDateTime} AND ECNO_AVG = {ECNO} AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC')
+   AND a.HIER321_ID IN( SELECT DISTINCT HIER321_ID FROM DIM_E_SGEH_HIER321 WHERE HIERARCHY_3 = '{1.controller}' AND VENDOR='{1.vendor}' AND HIERARCHY_1 IN( SELECT HIERARCHY_1 FROM DIM_E_SGEH_HIER321_CELL WHERE CELL_ID = '{1.cellId}'))]]></SqlTest>
+   <Validate precision="4">RTT = sqlRTT,RTTSample = sqlRTTSAMPLE</Validate>
+   </RepeatValidation>
+</TestCase>
+
+<TestCase id="5">
+   <PreConditionSql><![CDATA[select count(*) as 'sqlCount' from EVENT_E_RAN_SESSION_RAW where {2.fiveMinDateTime}]]></PreConditionSql>
+   <PreCondition><![CDATA[sqlCount > 0]]></PreCondition>
+   <Direction>Chart By Options -> UL Interference</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/USER_PLANE/KPI_CHART/KPI_DRILL?time={time}&kpiStartTime={2.kpiTimeInMilliseconds}&tzOffset=+0000&node={-master-RttServerAccessAreaNode}&type=CELL&drilltype=UL_INTERFERENCE_AVG&kpiId=3]]></Url>
+   <JSONVariables>DrillBy:UL,Value:RTT,Samples:RTTSample</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[SELECT CAST(ISNULL(ROUND(AVG(SETUP_TIME_NET),4),0) AS NUMERIC(16,4))  AS 'sqlRTT', COUNT(SETUP_TIME_NET) AS 'sqlRTTSAMPLE' FROM EVENT_E_USER_PLANE_TCP_RAW a, EVENT_E_RAN_SESSION_RAW b WHERE a.HIER321_ID = b.START_HIER321_ID AND a.IMSI = b.IMSI
+   AND a.HIER3_ID IS NOT NULL AND a.{2.fiveMinAggTime} AND b.{2.fiveMinDateTime} AND UL_INTERFERENCE_AVG = {UL} AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC')
+   AND a.HIER321_ID IN( SELECT DISTINCT HIER321_ID FROM DIM_E_SGEH_HIER321 WHERE HIERARCHY_3 = '{1.controller}' AND VENDOR='{1.vendor}' AND HIERARCHY_1 IN( SELECT HIERARCHY_1 FROM DIM_E_SGEH_HIER321_CELL WHERE CELL_ID = '{1.cellId}'))]]></SqlTest>
+   <Validate precision="4">RTT = sqlRTT,RTTSample = sqlRTTSAMPLE</Validate>
+   </RepeatValidation>
+</TestCase>
+
+<TestCase id="6">
+   <PreConditionSql><![CDATA[select count(*) as 'sqlCount' from EVENT_E_RAN_SESSION_RAW where {2.fiveMinDateTime}]]></PreConditionSql>
+   <PreCondition><![CDATA[sqlCount > 0]]></PreCondition>
+   <Direction>Chart By Options -> HS Users in Cell</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/USER_PLANE/KPI_CHART/KPI_DRILL?time={time}&kpiStartTime={2.kpiTimeInMilliseconds}&tzOffset=+0000&node={-master-RttServerAccessAreaNode}&type=CELL&drilltype=HSDSCH_AVG_USERS&kpiId=3]]></Url>
+   <JSONVariables>DrillBy:HSDSCH,Value:RTT,Samples:RTTSample</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[SELECT CAST(ISNULL(ROUND(AVG(SETUP_TIME_NET),4),0) AS NUMERIC(16,4))  AS 'sqlRTT', COUNT(SETUP_TIME_NET) AS 'sqlRTTSAMPLE' FROM EVENT_E_USER_PLANE_TCP_RAW a, EVENT_E_RAN_SESSION_RAW b WHERE a.HIER321_ID = b.START_HIER321_ID AND a.IMSI = b.IMSI
+   AND a.HIER3_ID IS NOT NULL AND a.{2.fiveMinAggTime} AND b.{2.fiveMinDateTime} AND HSDSCH_AVG_USERS = {HSDSCH} AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC')
+   AND a.HIER321_ID IN( SELECT DISTINCT HIER321_ID FROM DIM_E_SGEH_HIER321 WHERE HIERARCHY_3 = '{1.controller}' AND VENDOR='{1.vendor}' AND HIERARCHY_1 IN( SELECT HIERARCHY_1 FROM DIM_E_SGEH_HIER321_CELL WHERE CELL_ID = '{1.cellId}'))]]></SqlTest>
+   <Validate precision="4">RTT = sqlRTT,RTTSample = sqlRTTSAMPLE</Validate>
+   </RepeatValidation>
+</TestCase>
+
+</TestSuite>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+<TestCase id="1">
+   <Direction>Launch -> 4G Radio Network -> 4G Ranking -> Call Setup Failure By Access Area</Direction>
+   <Url><![CDATA[NETWORK/LTE_CALL_FAILURE_RANKING_ANALYSIS/ACCESS_AREA/CALL_SETUP?time={time}&display=grid&tzOffset=%2B0530&maxRows=50]]></Url>
+   <CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=%2B0530&dataTimeFrom={time}&dataTimeTo={time}&userName=admin&url=NETWORK/LTE_CALL_FAILURE_RANKING_ANALYSIS/ACCESS_AREA/CALL_SETUP&maxRows=0]]></CSVUrl>
+   <IgnoredInCsv>1:jsonHierThreeTwoOneId,2:jsonHierThreeId,8:rat</IgnoredInCsv>
+   <JSONVariables>1:jsonHierThreeTwoOneId,2:jsonHierThreeId,3:rank,5:jsonEnodeB,6:jsonAcessArea ,7:jsonFailures,8:rat</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[select count(*) as 'sqlFailures' from EVENT_E_LTE_CFA_ERR_RAW  where DATETIME_ID >= '2015-03-12 05:00' and DATETIME_ID < '2015-03-13 05:00' and CATEGORY_ID = 1 and hier321_id={jsonHierThreeTwoOneId} and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+   <Validate>jsonFailures=sqlFailures</Validate>
+   <Validate><![CDATA[ rank < 50 ]]></Validate>
+   </RepeatValidation>
+   <Validate>sort{jsonFailures} = desc</Validate>
+   <Validate>sort{rank} = asc</Validate>
+</TestCase>
+</TestSuite>

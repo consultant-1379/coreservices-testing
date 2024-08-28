@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+<TestCase id="1">
+<Direction>Launch -> 4G Radio Network -> 4G Ranking -> Call Setup Failures</Direction>
+<Url><![CDATA[SUBSCRIBER/LTE_CALL_FAILURE_RANKING_ANALYSIS/SUBSCRIBER/CALL_SETUP?time={time}&display=grid&tzOffset=%2B0530&maxRows=50]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=%2B0530&dataTimeFrom={time}&dataTimeTo={time}&userName=admin&url=SUBSCRIBER/LTE_CALL_FAILURE_RANKING_ANALYSIS/SUBSCRIBER/CALL_SETUP&maxRows=0]]></CSVUrl>
+<JSONVariables>1:rank,2:jsonIMSI,3:jsonfailures</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count (*) as 'sqlFailures' from dc.EVENT_E_LTE_CFA_ERR_RAW where imsi= {jsonIMSI} and CATEGORY_ID = 1 and DATETIME_ID >= '2015-02-02 09:01' and DATETIME_ID < '2015-02-02 09:31' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') group by imsi]]></SqlTest>
+<Validate>jsonfailures = sqlFailures</Validate>
+</RepeatValidation>
+<Validate>sort{jsonfailures} = desc</Validate>
+<Validate><![CDATA[ rank < 50 ]]></Validate>
+<Validate>sort{rank} = asc</Validate>
+</TestCase>
+
+</TestSuite>
+

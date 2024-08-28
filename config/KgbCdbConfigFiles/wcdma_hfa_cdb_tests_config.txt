@@ -1,0 +1,8 @@
+AllTests\Workspace\IMSI\3G_Event_Trace\Handover_Failure.xml
+AllTests\Workspace\Terminal\3G_Terminal_Event_Analysis\Handover_Failure.xml
+AllTests\Workspace\Terminal_Group\3G_Terminal_Event_Analysis\Handover_Failure.xml
+AllTests\Workspace\3G_Radio_Network\3G_Ranking\Handover_Failure_Interfrequency.xml
+AllTests\Workspace\3G_Radio_Network\3G_Ranking\Handover_Failure_Terminal.xml
+AllTests\Workspace\3G_Radio_Network\3G_Ranking\HSDSCH_Handover.xml
+AllTests\Workspace\3G_Radio_Network\3G_Ranking\IRAT_Handover.xml
+AllTests\Workspace\3G_Radio_Network\3G_Ranking\Soft_Handover.xml

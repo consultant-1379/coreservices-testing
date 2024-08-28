@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+	<TestCase id="1">
+		<Direction>Launch -> Controller -> Network Event Analysis -> Core PS</Direction>
+		<Url><![CDATA[NETWORK/EVENT_ANALYSIS?time=30&type=BSC&node={-master-controllerNode-}&display=grid&key=SUM&tzOffset=+0100&maxRows=500]]></Url>
+		<CSVUrl><![CDATA[EniqEventsCSV.jsp?type=BSC&node={-master-controllerNode-}&display=grid&key=SUM&tzOffset=+0100&dataTimeFrom=1415878200000&dataTimeTo=1415880000000&userName=admin&url=NETWORK/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+		<JSONVariables>1:ratId,2:vendor,3:controller,4:eventId,5:eventIdDesc,6:failures,7:successes,8:total,9:successRatio,10:impactedSubs</JSONVariables>
+		<IgnoredInCsv>4:eventId</IgnoredInCsv>
+		<RepeatValidation instruction="all">
+			<SqlTest instruction="Use:ratId"><![CDATA[Select count(*) as 'sqlFailures' from event_e_lte_err_raw where vendor = '{vendor}' and hierarchy_3='{controller}' and rat={ratId}  and event_id = {eventId} and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+			<Validate>failures = sqlFailures</Validate>
+			<SqlTest instruction="Use:ratId"><![CDATA[Select sum(no_of_successes) as 'sqlSuccess' from EVENT_E_LTE_VEND_HIER3_EVENTID_SUC_15MIN where vendor = '{vendor}' and hierarchy_3='{controller}' and rat={ratId} and event_id = {eventId}  and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00']]></SqlTest>
+			<Validate>successes = sqlSuccess</Validate>
+			<SqlTest instruction="Use:ratId"><![CDATA[select count(distinct(imsi)) as 'sqlImpacted' from event_e_lte_err_raw where vendor = '{vendor}'and hierarchy_3='{controller}' and rat={ratId} and event_id = {eventId}  and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+			<Validate>impactedSubs = sqlImpacted</Validate>
+			<Validate>successes + failures = total</Validate>
+			<Validate>( successes / total ) * 100 = successRatio</Validate>
+		</RepeatValidation>
+		<RepeatDrillDown instruction="all">2</RepeatDrillDown>
+		<PassToDrillDown id="2">eventId,ratId,vendor,controller,failures</PassToDrillDown>
+	</TestCase>
+	
+	<TestCase id="2">
+		<PreCondition>1.failures > 0</PreCondition>
+		<Direction>Drill on Failure</Direction>
+		<Url><![CDATA[NETWORK/EVENT_ANALYSIS?dateFrom=08112014&dateTo=08112014&timeFrom=1315&timeTo=1345&display=grid&tzOffset=+0100&maxRows=500&key=ERR&type=BSC&dataTieredDelay=true&RAT={1.ratId}&vendor={1.vendor}&bsc={1.controller}&eventID={1.eventId}]]></Url>
+		<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0100&key=ERR&type=BSC&dataTieredDelay=true&RAT={1.ratId}&vendor={1.vendor}&bsc={1.controller}&eventID={1.eventId}&dataTimeFrom=1415878200000&dataTimeTo=1415880000000&userName=admin&url=NETWORK/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+		<JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventIdDesc,8:eventResDesc,9:causeProtDesc,10:causeCodeID,11:causeCodeDesc,12:subCauseCodeID,13:subCauseCodeDesc,14:SGSNMME,15:ratDesc,16:controller,18:accessArea,19:vendor,57:apn,76:ratId</JSONVariables>
+		<IgnoredInCsv>72:sysCauseCode,73:sysSubcause,74:sysEventRes,75:sysCauseProt</IgnoredInCsv>
+		<RepeatValidation instruction="random10">
+			<SqlTest instruction="Use:ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {imsi} and event_time = '{eventTime}' and cause_code = {causeCodeID} and subcause_code = {subCauseCodeID} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00']]></SqlTest>
+			<Validate>tac = sqlTac,SGSNMME = sqlEventSourceName,1.ratId = sqlRatID,1.controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,1.eventId = sqlEventID,1.vendor = sqlVendor</Validate>
+		</RepeatValidation>
+		<Validate>1.failures = count{eventTime}</Validate>
+		<Validate>sort{eventTime} = desc</Validate>
+	</TestCase>
+
+</TestSuite>

@@ -1,0 +1,393 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<style>
+    H1 {
+        color: #191975;
+        font-family: "Avant Garde", Avantgarde, "Century Gothic", CenturyGothic, "AppleGothic", sans-serif;
+        text-align: center;
+    }
+
+    .infoText {
+        text-align: center;
+    }
+
+    .testInfo {
+        margin-left: 7%;
+    }
+
+    .testInfo table {
+        table-layout: fixed;
+        width: 30%;
+
+        font-family: Arial, Helvetica, sans-serif;
+        color: #666;
+        font-size: 12px;
+        text-shadow: 1px 1px 0px #fff;
+        background: #eaebec;
+
+        border: #ccc 1px solid;
+
+        -moz-border-radius: 3px;
+        -webkit-border-radius: 3px;
+        border-radius: 3px;
+
+        -moz-box-shadow: 0 1px 2px #d1d1d1;
+        -webkit-box-shadow: 0 1px 2px #d1d1d1;
+        box-shadow: 0 1px 2px #d1d1d1;
+    }
+
+    .testsummary {
+        margin-left: 7%;
+    }
+
+    .testsummary table {
+        table-layout: fixed;
+        width: 81%;
+
+        font-family: Arial, Helvetica, sans-serif;
+        color: black;
+        font-size: 12px;
+        text-shadow: 1px 1px 0px #fff;
+        background: #eaebec;
+        
+        border: #ccc 1px solid;
+
+        -moz-border-radius: 3px;
+        -webkit-border-radius: 3px;
+        border-radius: 3px;
+
+        -moz-box-shadow: 0 1px 2px #d1d1d1;
+        -webkit-box-shadow: 0 1px 2px #d1d1d1;
+        box-shadow: 0 1px 2px #d1d1d1;
+    }
+
+    .testsummary table tr td {
+        word-wrap: break-word;
+        text-align: center;
+    }
+
+    .testsummary table tr th {
+        background-color: #3333CC;
+        color: white;
+        font-weight: bold;
+        text-shadow: none;
+        word-wrap: break-word;
+        border: #ccc 1px solid;
+
+        -moz-border-radius: 3px;
+        -webkit-border-radius: 3px;
+        border-radius: 3px;
+    }
+
+    .testsummary table tr {
+        height: 40px;
+    }
+    .testsummaryB {
+        margin-left: 7%;
+    }
+
+    .testsummaryB table {
+        table-layout: fixed;
+        width: 81%;
+
+        font-family: Arial, Helvetica, sans-serif;
+        color: #666;
+        font-size: 12px;
+        text-shadow: 1px 1px 0px #fff;
+        /*text-shadow: 1px 1px 0px #fff;*/
+        background: #eaebec;
+
+        border: #ccc 1px solid;
+
+        -moz-border-radius: 3px;
+        -webkit-border-radius: 3px;
+        border-radius: 3px;
+
+        -moz-box-shadow: 0 1px 2px #d1d1d1;
+        -webkit-box-shadow: 0 1px 2px #d1d1d1;
+        box-shadow: 0 1px 2px #d1d1d1;
+    }
+
+    .testsummaryB table tr td {
+        word-wrap: break-word;
+        text-align: center;
+    }
+
+    .testsummaryB table tr th {
+        background-color: #eaebec;
+               font-family: Arial, Helvetica, sans-serif;
+        color: #666;
+        font-size: 12px;
+        text-shadow: 1px 1px 0px #fff;
+        
+        word-wrap: break-word;
+        /*text-shadow: none;border: #ccc 1px solid;*/
+
+        -moz-border-radius: 3px;
+        -webkit-border-radius: 3px;
+        border-radius: 3px;
+    }
+
+    .testsummaryB table tr {
+        height: 25px;
+    }
+    .failtable {
+        margin-left: 7%;
+    }
+	
+	pre {
+		display: block;
+	}
+	
+	#valText{
+		width: 79%;
+		word-wrap: break-word;
+	}
+	
+    .failtable table {
+        border-collapse: collapse;
+        border: 1px solid black;
+        width: 81%;
+        table-layout: fixed;
+        font-family: Arial, Helvetica, sans-serif;
+        color: black;
+        font-size: 12px;
+        text-shadow: none;
+        background: #eaebec;
+        border: #ccc 1px solid;
+
+        -moz-border-radius: 3px;
+        -webkit-border-radius: 3px;
+        border-radius: 3px;
+
+        -moz-box-shadow: 0 1px 2px #d1d1d1;
+        -webkit-box-shadow: 0 1px 2px #d1d1d1;
+        box-shadow: 0 1px 2px #d1d1d1;
+    }
+
+    .failtable table tr td {
+        padding: 5px;
+    }
+
+    .failtable table tr td div {
+        display: none;
+
+    }
+
+    .failtable table tr td div:target {
+        display: block;
+        text-align: center;
+        width: 100%;
+    }
+    
+    .failtable table tbody tr td p {
+        color: white;
+    }
+
+    .resultTag {
+        text-align: center;
+        margin: 0.3%;
+        color: black;
+        text-shadow: none;
+        background-color: #3333CC;
+        border: #ccc 1px solid;
+
+        -moz-border-radius: 3px;
+        -webkit-border-radius: 3px;
+        border-radius: 3px;
+    }
+
+    .resultTable table {
+
+        width: 99.2%;
+        margin: 0.4%;
+        text-align: left;
+        table-layout: fixed;
+    }
+
+    .resultTableHead {
+        width: 10%;
+        color: black;
+    }
+
+    .resultTableBody {
+        width: 90%;
+    }
+
+    .resultRef {
+        text-decoration: none;
+    }
+
+    a {
+        color: black;
+    }
+
+    a.resultRef{
+        color: white;
+    }
+
+    a:hover {
+        color: #009900;
+    }
+
+
+    .resultClose {
+        float: right;
+        background-color: #3333CC;
+        text-decoration: none;
+        font-size: 100%;
+        font-weight: bold;
+        padding-right: .5%;
+    }
+</style>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Arrest-It Test Results</title>
+</head>
+
+<body>
+<H1 id="docHeading">Test Results Tuesday 13 May</H1>
+
+<div>
+    <tt><font size="5">Result Info:</font></tt>
+</div>
+<br/>
+
+<div class="testInfo">
+    <table>
+        <tr>
+            <td>
+                Unique Grid Tests Attempted:
+            </td>
+            <td class="infoText" id="uniqueGridsAttempted">7</td>
+        </tr>
+        <tr>
+            <td>
+                Unique Grids Tested:
+            </td>
+            <td class="infoText" id="uniqueGrids">7</td>
+        </tr>
+        <tr>
+            <td>
+                Temporal Values Tested:
+            </td>
+            <td class="infoText" id="temporalValues">12</td>
+        </tr>
+
+        <tr>
+            <td>
+                Time Zone Offset:
+            </td>
+            <td class="infoText" id="tzOffset">+0500</td>
+        </tr>
+    </table>
+
+</div>
+<br/>
+
+<div>
+    <tt><font size="5">Result Summary:</font></tt>
+</div>
+<br/>
+
+<div class="testsummary">
+    <table>
+        <tr>
+            <th>
+                Total Test Cases
+            </th>
+            <th>
+                Test Cases Passed
+            </th>
+            <th>
+                Test Cases Failed
+            </th>
+            <th>
+                % Tests Passed
+            </th>
+            <th>
+                Total Validations
+            </th>
+            <th>
+                Validations Passed
+            </th>
+            <th>
+                Validations Failed
+            </th>
+            <th>
+                % Validations Passed
+            </th>
+        </tr>
+        <tr>
+            <td>
+                <tt id="totalTests">157</tt>
+            </td>
+            <td>
+                <tt id="testsPassed">57</tt>
+            </td>
+            <td>
+                <tt id="testsFailed" style="color:#990000">100</tt>
+            </td>
+            <td>
+                <tt id="percTestsPassed" style="color:#990000">23%</tt>
+            </td>
+            <td>
+                <tt id="totalValidations">240</tt>
+            </td>
+            <td>
+                <tt id="validationsPassed">200</tt>
+            </td>
+            <td>
+                <tt id="validationsFailed" style="color:#990000">40</tt>
+            </td>
+            <td>
+                <tt id="percValsPassed" style="color:#990000">73%</tt>
+            </td>
+        </tr>
+    </table>
+</div>
+<br/>
+<div class="testsummaryB">
+    <table>
+        <tr style="background-color: #eaebec">
+            <th>
+                Drills Attempted
+            </th>
+            <th>
+                Drills Not Completed
+            </th>
+            <th>
+                % Preconditions Passed
+            </th>
+            <th>
+                No of Urls Returning No Data
+            </th>
+        </tr>
+        <tr>
+            <td>
+                <tt id="drillsAttempted">157</tt>
+            </td>
+            <td>
+                <tt id="drillsFailed">57</tt>
+            </td>
+            <td>
+                <tt id="percPreconditions">100</tt>
+            </td>
+            <td>
+                <tt id="emptyUrls">23</tt>
+            </td>
+        </tr>
+    </table>
+</div>
+<div id="closeResult"></div>
+<br/>
+
+<div>
+    <tt><font size="5">Detailed Summary:</font></tt></div><br/>
+
+<div><br/>
+    <tt><font size="5">Failed Results:</font></tt></div><br/>
+
+
+</body>
+</html>

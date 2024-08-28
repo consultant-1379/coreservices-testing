@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<TestCase id="1">
+<Direction> Launch -> 3G Radio Network -> 3G Ranking -> Call Drops </Direction>
+<MaxValidation>6</MaxValidation>
+<Url><![CDATA[SUBSCRIBER/CALL_FAILURE_RANKING_ANALYSIS/SUBSCRIBER/CALL_DROP?dateFrom=13022015&dateTo=13022015&timeFrom=1515&timeTo=1530&display=grid&tzOffset=%2B0000]]></Url>
+<JSONVariables>2:imsi,3:failures,4:reestablishmentFailures</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count(*) as 'sqlFailures' from EVENT_E_RAN_CFA_ERR_RAW where DATETIME_ID >= '2015-02-13 15:15' and DATETIME_ID < '2015-02-13 15:30' and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and event_id = {-master-WcdmaCallDropId} and imsi = {imsi} and NE_version = '{-master-WcdmaNEVersion}']]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+</RepeatValidation>
+</TestCase>
+
+</TestSuite>

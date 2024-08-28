@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TestSuite>
+<TestCase id="1">
+<Direction>Launch -> Controller Group -> QOS ->HandOver Failure(4G)</Direction>
+<Url><![CDATA[NETWORK/LTE_HFA_QOS_SUMMARY_ANALYSIS/QCI_CATEGARY_SUMMARY?time=10080&type=BSC&groupname={-master-LTEHFAGroup}&display=grid&tzOffset=%2B0530&maxRows=500]]></Url>
+<JSONVariables>1:groupName,2:qciId,3:qciDecs,4:categoryId,6:failure,7:impactedSubscriber</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count (*) as 'sqlFailures',count (distinct IMSI) as 'sqlImpactedSubscribers' from dc.EVENT_E_LTE_HFA_ARRAY_ERAB_ERR_RAW,GROUP_TYPE_E_RAT_VEND_HIER3 group_table where QCI_ID = {qciId} and CATEGORY_ID_2 = {categoryId} and DATETIME_ID >= '2015-02-21 18:30' and DATETIME_ID < '2015-02-28 18:30' and ISNULL(EVENT_E_LTE_HFA_ARRAY_ERAB_ERR_RAW.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and EVENT_E_LTE_HFA_ARRAY_ERAB_ERR_RAW.HIER3_ID = group_table.HIER3_ID and group_table.GROUP_NAME = '{groupName}']]></SqlTest>
+<Validate>failure = sqlFailures,impactedSubscriber = sqlImpactedSubscribers</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">2</RepeatDrillDown>
+<PassToDrillDown id="2">qciId,categoryId,failure,groupName</PassToDrillDown>
+</TestCase>
+
+<TestCase id="2">
+<Direction>Drill on HandOver Stage</Direction>
+<Url><![CDATA[NETWORK/LTE_HFA_QOS_SUMMARY_ANALYSIS/QCI_EVENT_SUMMARY/ENODEB?dateFrom=23022015&dateTo=02032015&timeFrom=0000&timeTo=0000&display=grid&tzOffset=%2B0530&maxRows=500&groupname={1.groupName}&QCI_ID={1.qciId}&CATEGORY_ID_2={1.categoryId} ]]></Url>
+<JSONVariables>1:controllerGrp,2:qciId,3:eventId,5:failure,6:impactedSubscriber</JSONVariables>
+<Validate>1.failure = sum{failure}</Validate>
+<RepeatDrillDown instruction="all">3</RepeatDrillDown>
+<PassToDrillDown id="3">controllerGrp,qciId,eventId,failure,impactedSubscriber</PassToDrillDown>
+</TestCase>
+
+<TestCase id="3">
+<Direction> Drill on Failure </Direction>
+<Url><![CDATA[NETWORK/LTE_HFA_QOS_DETAILED_EVENT_ANALYSIS/QCI/ENODEB?dateFrom=23022015&dateTo=02032015&timeFrom=0000&timeTo=0000&display=grid&tzOffset=%2B0530&maxRows=500&groupname={2.controllerGrp}&QCI_ID={2.qciId}&eventID={2.eventId}]]></Url>
+<JSONVariables>5:eventTime,6:IMSI,7:TAC,8:Make,9:Model</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select isnull(CAST(rawview.imsi as varchar),' ') as 'sqlImsi' ,rawview.tac as 'sqlTac', case WHEN (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') ELSE ' ' END AS 'sqlMake', case when (rawview.TAC IS NOT null AND  rawview.TAC <> 0 ) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME,'Model Unknown') when (rawview.TAC = 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME,'Model Invalid') else ' ' end AS 'sqlModel'from (select tac,imsi from EVENT_E_LTE_HFA_ARRAY_ERAB_ERR_RAW,GROUP_TYPE_E_RAT_VEND_HIER3 group_table where event_time = '{eventTime}'and  DATETIME_ID >= '2015-02-21 18:30' and DATETIME_ID < '2015-02-28 18:30' and EVENT_E_LTE_HFA_ARRAY_ERAB_ERR_RAW.EVENT_ID = {2.eventId} and EVENT_E_LTE_HFA_ARRAY_ERAB_ERR_RAW.QCI_ID = {2.qciId} and ISNULL(EVENT_E_LTE_HFA_ARRAY_ERAB_ERR_RAW.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and imsi={IMSI} and EVENT_E_LTE_HFA_ARRAY_ERAB_ERR_RAW.HIER3_ID = group_table.HIER3_ID and group_table.GROUP_NAME = '{2.controllerGrp}')AS rawview, DIM_E_SGEH_TAC WHERE rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+<Validate>IMSI = sqlImsi,Make = sqlMake,Model = sqlModel,TAC = sqlTac</Validate>
+</RepeatValidation>
+<Validate>2.failure=count{eventTime}</Validate>
+</TestCase>
+</TestSuite>

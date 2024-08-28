@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<TestCase id="1">
+<Direction>Launch -> 3G Session Browser -> Summary Window -> Radio and Cell Conditions Panel</Direction>
+<Url><![CDATA[SESSION_BROWSER/SESSION_SUMMARY/RAB?time={time}&tzOffset=%2B0100&imsi={-master-SESSIONBROWERIMSI}]]></Url>
+<!-- JSONs values for this window are not represented in numeric formats. Here, columns are represented with column name instead. -->
+<JSONVariables>averageEcno:ecno,averageRscp:rscp,badCoverageBadSignal:bcbs,badCoverageBadSignalPercentage:bcbsPerc,badCoverageGoodSignal:bcgs,badCoverageGoodSignalPercentage:bcgsPerc,goodCoverageBadSignal:gcbs,goodCoverageBadSignalPercentage:gcbsPerc,goodCoverageGoodSignal:gcgs,goodCoverageGoodSignalPercentage:gcgsPerc,noMeasurementReports:total</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[SELECT CAST(SUM(RRC_SAMPLES_GC_BS) AS FLOAT) AS 'sqlTOTALGCBS', CAST(SUM(RRC_SAMPLES_GC_GS) AS FLOAT) AS 'sqlTOTALGCGS', CAST(SUM(RRC_SAMPLES_BC_BS) AS FLOAT) AS 'sqlTOTALBCBS', CAST(SUM(RRC_SAMPLES_BC_GS) AS FLOAT) AS 'sqlTOTALBCGS', sqlTOTALGCBS+sqlTOTALGCGS+sqlTOTALBCBS+sqlTOTALBCGS AS 'sqlTOTALSAMPLES',
+    CAST((sqlTOTALGCBS/sqlTOTALSAMPLES)*100 AS NUMERIC(16,4)) AS 'sqlPERCENTAGEGCBS', CAST((sqlTOTALGCGS/sqlTOTALSAMPLES)*100 AS NUMERIC(16,4)) AS 'sqlPERCENTAGEGCGS', CAST((sqlTOTALBCBS/sqlTOTALSAMPLES)*100 AS NUMERIC(16,4)) AS 'sqlPERCENTAGEBCBS', CAST((sqlTOTALBCGS/sqlTOTALSAMPLES)*100 AS NUMERIC(16,4)) AS 'sqlPERCENTAGEBCGS'
+    FROM EVENT_E_RAN_SESSION_CELL_VISITED_RAW  where DATETIME_ID >= '2015-09-02 00:00' and DATETIME_ID < '2015-09-09 00:00' and IMSI = {-master-SESSIONBROWERIMSI}]]></SqlTest>
+<Validate>bcbs = sqlTOTALBCBS, bcgs = sqlTOTALBCGS, gcbs = sqlTOTALGCBS, gcgs = sqlTOTALGCGS, total = sqlTOTALSAMPLES</Validate>
+<Validate>bcbsPerc = sqlPERCENTAGEBCBS, bcgsPerc = sqlPERCENTAGEBCGS, gcbsPerc = sqlPERCENTAGEGCBS, gcgsPerc = sqlPERCENTAGEGCGS</Validate>
+<SqlTest><![CDATA[select isnull(CAST(CAST(MEDIAN(ECNO_AVG) AS NUMERIC(16,1)) as varchar),'-') as 'sqlECNO',isnull(CAST(CAST(MEDIAN(RSCP_AVG) AS NUMERIC(16,1)) as varchar),'-') as 'sqlRSCP' from EVENT_E_RAN_SESSION_RAW where DATETIME_ID >= '2015-09-02 00:00' and DATETIME_ID < '2015-09-09 00:00' and IMSI = {-master-SESSIONBROWERIMSI}]]></SqlTest>
+<Validate>ecno = sqlECNO, rscp = sqlRSCP</Validate>
+</RepeatValidation>
+</TestCase>
+
+</TestSuite>

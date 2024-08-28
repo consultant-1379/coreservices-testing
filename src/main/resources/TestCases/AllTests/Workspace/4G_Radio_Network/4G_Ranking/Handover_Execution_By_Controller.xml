@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<TestCase id="1">
+<Direction>Launch -> 4G Radio Network -> 4G Ranking -> HandOver Execution By Controller</Direction>
+<Url><![CDATA[NETWORK/LTE_HANDOVER_FAILURE_SUBSCRIBER_EXEC_RANKING_ANALYSIS/ENODEB/EXEC?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=+0530&maxRows=30]]></Url>
+<JSONVariables>1:hierId,2:categoryId,3:rank,5:eNodeB,6:failures</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count(*) as 'sqlFailure' from dc.EVENT_E_LTE_HFA_ERR_RAW where CATEGORY_ID_2 = {categoryId} and HIER3_ID = {hierId} and DATETIME_ID >= '2015-02-10 12:31' and DATETIME_ID < '2015-02-10 13:01'and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>failures = sqlFailure</Validate>
+</RepeatValidation>
+<Validate>sort{failures} = desc</Validate>
+<Validate><![CDATA[ rank < 50 ]]></Validate>
+<RepeatDrillDown instruction="all">2</RepeatDrillDown>
+<PassToDrillDown id="2">hierId</PassToDrillDown>
+</TestCase>
+
+<TestCase id="2">
+<Direction>Drill On Controller</Direction>
+<Url><![CDATA[NETWORK/LTE_HANDOVER_FAILURE_SUBSCRIBER_EVENT_SUMMARY_ANALYSIS/NODE?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&HIER3_ID={1.hierId}&type=BSC&display=grid&tzOffset=+0530&maxRows=500]]></Url>
+<JSONVariables>1:hierId,5:categoryId,6:failures,7:ImpactedSubscribers</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count (*)as 'sqlFailures',count (distinct IMSI) as 'sqlImpacted'   from dc.EVENT_E_LTE_HFA_ERR_RAW where CATEGORY_ID_2 = {categoryId} and HIER3_ID = {hierId} and DATETIME_ID >= '2015-02-10 13:16' and DATETIME_ID < '2015-02-10 14:16' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+<Validate>ImpactedSubscribers=sqlImpacted</Validate>
+</RepeatValidation>
+<Validate>sort{failures} = desc</Validate>
+<RepeatDrillDown instruction="all">3</RepeatDrillDown>
+<PassToDrillDown id="3">hierId,categoryId</PassToDrillDown>
+</TestCase>
+
+<TestCase id="3">
+<Direction>Drill On Execution/Preparation</Direction>
+<Url><![CDATA[NETWORK/LTE_HANDOVER_FAILURE_SUBSCRIBER_EVENT_SUMMARY_ANALYSIS/CATEGORY_ID_ENODEB?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=+0530&maxRows=500&HIER3_ID={2.hierId}&categoryId={2.categoryId}]]></Url>
+<JSONVariables>1:hierId,5:eventId,6:failures,7:ImpactedSubscribers</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count (*) as 'sqlFailure',count (distinct IMSI) as 'sqlImpacted'  from dc.EVENT_E_LTE_HFA_ERR_RAW where EVENT_ID ={eventId} and HIER3_ID = {hierId} and CATEGORY_ID_2 = {2.categoryId} and DATETIME_ID >= '2015-02-10 14:18' and DATETIME_ID < '2015-02-10 15:18' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>failures = sqlFailure</Validate>
+<Validate>ImpactedSubscribers=sqlImpacted</Validate>
+</RepeatValidation>
+<Validate>sort{failures} = desc</Validate>
+<RepeatDrillDown instruction="all">4</RepeatDrillDown>
+<PassToDrillDown id="4">hierId,eventId,failures</PassToDrillDown>
+</TestCase>
+
+<TestCase id="4">
+<Precondition>3.failures > 0</Precondition>
+<Direction>Drill On Failures</Direction>
+<Url><![CDATA[NETWORK/LTE_HANDOVER_FAILURE_SUBSCRIBER_DETAILED_EVENT_ANALYSIS/ENODEB?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=+0530&maxRows=500&HIER3_ID={3.hierId}&&eventID={3.eventId}]]></Url>
+<JSONVariables>1:hierId,5:eventTime,7:IMSI,8:TAC,9:MAnufacturer,10:MOdel</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select  isnull(CAST(rawview.imsi as varchar),' ') as 'sqlIMSI' ,rawview.hier3_id as 'sqlHier',rawview.tac as 'sqlTac', case WHEN (rawview.TAC != NULL AND rawview.TAC != 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') ELSE ' ' END AS 'sqlMake', case when (rawview.TAC != NULL AND  rawview.TAC != 0 ) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME,'Model Unknown') when (rawview.TAC = 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME,'Model Invalid') else ' '  end AS 'sqlModel'  from (select imsi,hier3_id,tac from EVENT_E_LTE_HFA_ERR_RAW as rawview where event_time = '{eventTime}' and rawview.hier3_id = {3.hierId} and rawview.EVENT_ID = {3.eventId} and imsi={IMSI} and DATETIME_ID >= '2015-02-10 16:51' and DATETIME_ID < '2015-02-10 17:51' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) AS rawview, DIM_E_SGEH_TAC WHERE rawview.TAC *= DIM_E_SGEH_TAC.TAC ]]></SqlTest>
+<Validate> IMSI = sqlIMSI,hierId = sqlHier,MAnufacturer = sqlMake ,MOdel = sqlModel,TAC = sqlTac </Validate>
+</RepeatValidation>
+<Validate>3.failures = count{eventTime}</Validate>
+</TestCase>
+</TestSuite>

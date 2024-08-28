@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TestSuite>
+
+<TestCase id="1">
+<MaxRowCount>100</MaxRowCount>
+<Direction>Launch ->Core PS Network ->Core Cause Code Ranking ->Core PS</Direction>
+<Url><![CDATA[NETWORK/RANKING_ANALYSIS?time={times}&display=grid&type=CC&tzOffset=+0100&maxRows=500]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&type=CC&tzOffset=+0000&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/RANKING_ANALYSIS&maxRows=0]]></CSVUrl>
+<JSONVariables>1:rank,2:causeProtDesc,3:causeCodeDesc,4:recommendedAction,5:causeProtId,6:causeCodeId,7:failures,8:successes</JSONVariables>
+<IgnoredInCsv>5:causeProtId</IgnoredInCsv>
+<RepeatValidation instruction="all">
+<SqlTest instruction="plus:sgeh"><![CDATA[select count(*) as 'sqlFailures' from event_e_lte_err_raw where cause_code = {causeCodeId} and cause_prot_type = {causeProtId} and cause_prot_type = (select cause_prot_type from dim_e_lte_cause_prot_type where cause_prot_type_desc = '{causeProtDesc}') and DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+<SqlTest instruction="plus:sgeh"><![CDATA[select sum(no_of_successes) as 'sqlSuccesses' from EVENT_E_LTE_EVNTSRC_CC_SUC_15MIN where cause_code = {causeCodeId} and cause_prot_type = {causeProtId} and cause_prot_type = (select cause_prot_type from dim_e_lte_cause_prot_type where cause_prot_type_desc = '{causeProtDesc}') and DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30']]></SqlTest>
+<Validate>successes = sqlSuccesses</Validate>
+<Validate><![CDATA[rank < 100]]></Validate>
+</RepeatValidation>
+<Validate>sort{rank} = asc</Validate>
+<Validate>sort{failures} = desc</Validate>
+<RepeatDrillDown instruction="all">2</RepeatDrillDown>
+<PassToDrillDown id="2">causeCodeId,causeProtId,causeProtDesc,failures</PassToDrillDown>
+</TestCase>
+
+
+<TestCase id="2">
+<PreCondition>1.failures >0</PreCondition>
+<Direction>Drill on Cause Code</Direction>
+<Url><![CDATA[NETWORK/CAUSE_CODE_ANALYSIS?time={times}&dataTieredDelay=true&causeCode={1.causeCodeId}&causeProtType={1.causeProtId}&causeProtTypeHeader={1.causeProtDesc}&display=grid&tzOffset=+0100&maxRows=500]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?dataTieredDelay=true&causeCode={1.causeCodeId}&causeProtType={1.causeProtId}&causeProtTypeHeader={1.causeProtDesc}&display=grid&tzOffset=%2B0000&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/CAUSE_CODE_ANALYSIS&maxRows=0]]></CSVUrl>
+<JSONVariables>1:causeProtId,2:causeProtDesc,3:causeCodeId,4:causeCodeDesc,5:recommendedAction,6:subcauseCodeId,7:subcauseCodeDesc,8:subcauseRecommended,9:occurances,10:impactedSubs</JSONVariables>
+<IgnoredInCsv>1:causeProtId</IgnoredInCsv>
+<RepeatValidation instruction="all">
+<SqlTest instruction="plus:sgeh"><![CDATA[select count(*) as 'sqlFailures' from event_e_lte_err_raw where cause_code = {causeCodeId} and cause_prot_type = {causeProtId} and cause_prot_type = (select cause_prot_type from dim_e_lte_cause_prot_type where cause_prot_type_desc = '{causeProtDesc}') and subcause_code = {subcauseCodeId} and DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>occurances = sqlFailures</Validate>
+<SqlTest instruction="distinctplus:sgeh"><![CDATA[select count(distinct(imsi)) as 'sqlImpacted' from event_e_lte_err_raw where cause_code = {causeCodeId} and cause_prot_type = {causeProtId} and cause_prot_type = (select cause_prot_type from dim_e_lte_cause_prot_type where cause_prot_type_desc = '{causeProtDesc}')  and subcause_code = {subcauseCodeId} and DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>impactedSubs = sqlImpacted</Validate>
+</RepeatValidation>
+<Validate>1.failures = sum{occurances}</Validate>
+<RepeatDrillDown instruction="all">3,4</RepeatDrillDown>
+</TestCase>
+
+<TestCase id="3">
+<Direction>Click to view a list of all possible Core PS Cause Codes</Direction>
+<Url><![CDATA[NETWORK/CAUSE_CODE_ANALYSIS/TABLE_CC?time={times}&display=grid&tzOffset=-0900&maxRows=500]]></Url>
+<JSONVariables>1:causeProtDesc,2:causeCodeId,3:causeCodeDesc,4:causeCodeHelp</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest instruction="or:sgeh"><![CDATA[select isnull(cause_code_desc,'NOCAUSECODE') as 'sqlCauseCodeDesc', cause_code_help as 'sqlCauseCodeHelp' from DIM_E_LTE_CAUSECODE where cause_code={causeCodeId} and cause_prot_type in (select cause_prot_type from DIM_E_LTE_CAUSE_PROT_TYPE where CAUSE_PROT_TYPE_DESC='{causeProtDesc}')]]></SqlTest>
+<Validate>causeCodeDesc = sqlCauseCodeDesc,causeCodeHelp = sqlCauseCodeHelp</Validate>
+</RepeatValidation>
+</TestCase>
+
+<TestCase id="4">
+<Direction>Click to view a list of all possible Core PS SubCause Codes</Direction>
+<Url><![CDATA[NETWORK/CAUSE_CODE_ANALYSIS/TABLE_SCC?time={times}&display=grid&tzOffset=-0900&maxRows=500]]></Url>
+<JSONVariables>1:subCauseCodeId,2:subCauseCodeDesc,3:subCauseCodeHelp</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest instruction="or:sgeh"><![CDATA[select subcause_code_desc as 'sqlSubCauseCodeDesc', subcause_code_help as 'sqlSubCauseCodeHelp' from DIM_E_LTE_SUBCAUSECODE where subcause_code={subCauseCodeId}]]></SqlTest>
+<Validate>subCauseCodeDesc = sqlSubCauseCodeDesc,subCauseCodeHelp = sqlSubCauseCodeHelp</Validate>
+</RepeatValidation>
+</TestCase>
+
+</TestSuite>

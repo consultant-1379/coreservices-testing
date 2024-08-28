@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--__________________________________________________________Grid View__________________________________________________________-->
+
+<TestSuite>
+<TestCase id="1">
+<Direction>Launch -> Controller Group -> Event Volume -> HandOver Failure (4G) -> Grid View </Direction>
+<Url><![CDATA[NETWORK/LTE_HFA_EVENT_VOLUME/EVENT_VOLUME?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&type=BSC&groupname={-master-LTEHFAGroup}&display=grid&tzOffset=%2B0530&maxRows=500]]></Url>
+<JSONVariables>1:eventVolumeTime,2:prepXtwoIn,3:prepXtwoOut,4:execXtwoIn,5:execXtwoOut,6:prepSoneIn,7:prepSoneOut,8:execSoneIn,9:execSoneOut,10:impactedSub</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[ select isnull(count(*), 0) as 'sqlPrepXtwoIn',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from EVENT_E_LTE_HFA_ERR_RAW as rawview,GROUP_TYPE_E_RAT_VEND_HIER3 as group_table where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.HIER3_ID = group_table.HIER3_ID and group_table.GROUP_NAME = '{-master-LTEHFAGroup}' and rawview.EVENT_ID = 4111]]></SqlTest>
+<Validate>prepXtwoIn = sqlPrepXtwoIn, impactedSub = sqlImapctedSubs</Validate>
+
+<SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlPrepXtwoOut',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from dc.EVENT_E_LTE_HFA_ERR_RAW rawview,GROUP_TYPE_E_RAT_VEND_HIER3 group_table where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and  rawview.HIER3_ID = group_table.HIER3_ID and group_table.GROUP_NAME = '{-master-LTEHFAGroup}' and rawview.EVENT_ID = 4110  ]]></SqlTest>
+<Validate>prepXtwoOut = sqlPrepXtwoOut, impactedSub = sqlImapctedSubs</Validate>
+
+<SqlTest><![CDATA[select  isnull(count(*), 0) as 'sqlexecXtwoIn',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from dc.EVENT_E_LTE_HFA_ERR_RAW rawview,GROUP_TYPE_E_RAT_VEND_HIER3 group_table where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and  rawview.HIER3_ID = group_table.HIER3_ID and group_table.GROUP_NAME = '{-master-LTEHFAGroup}' and rawview.EVENT_ID = 4113  ]]></SqlTest>
+<Validate>execXtwoIn = sqlexecXtwoIn, impactedSub = sqlImapctedSubs</Validate>
+
+<SqlTest><![CDATA[select  isnull(count(*), 0) as 'sqlexecXtwoOut',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from dc.EVENT_E_LTE_HFA_ERR_RAW rawview,GROUP_TYPE_E_RAT_VEND_HIER3 group_table where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and  rawview.HIER3_ID = group_table.HIER3_ID and group_table.GROUP_NAME = '{-master-LTEHFAGroup}' and rawview.EVENT_ID = 4112  ]]></SqlTest>
+<Validate>execXtwoOut = sqlexecXtwoOut, impactedSub = sqlImapctedSubs</Validate>
+
+<SqlTest><![CDATA[select  isnull(count(*), 0) as 'sqlPrepSoneIn',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from dc.EVENT_E_LTE_HFA_ERR_RAW rawview,GROUP_TYPE_E_RAT_VEND_HIER3 group_table where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and  rawview.HIER3_ID = group_table.HIER3_ID and group_table.GROUP_NAME = '{-master-LTEHFAGroup}' and rawview.EVENT_ID = 4103  ]]></SqlTest>
+<Validate>prepSoneIn = sqlPrepSoneIn, impactedSub = sqlImapctedSubs</Validate>
+
+<SqlTest><![CDATA[select  isnull(count(*), 0) as 'sqlPrepSoneOut',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from dc.EVENT_E_LTE_HFA_ERR_RAW rawview,GROUP_TYPE_E_RAT_VEND_HIER3 group_table where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and  rawview.HIER3_ID = group_table.HIER3_ID and group_table.GROUP_NAME = '{-master-LTEHFAGroup}' and rawview.EVENT_ID = 4102  ]]></SqlTest>
+<Validate>prepSoneOut = sqlPrepSoneOut, impactedSub = sqlImapctedSubs</Validate>
+
+<SqlTest><![CDATA[select  isnull(count(*), 0) as 'sqlExecSoneIn',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from dc.EVENT_E_LTE_HFA_ERR_RAW rawview,GROUP_TYPE_E_RAT_VEND_HIER3 group_table where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and  rawview.HIER3_ID = group_table.HIER3_ID and group_table.GROUP_NAME = '{-master-LTEHFAGroup}' and rawview.EVENT_ID = 4105  ]]></SqlTest>
+<Validate>execSoneIn = sqlExecSoneIn, impactedSub = sqlImapctedSubs</Validate>
+
+<SqlTest><![CDATA[select  isnull(count(*), 0) as 'sqlExecSoneOut',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from dc.EVENT_E_LTE_HFA_ERR_RAW rawview,GROUP_TYPE_E_RAT_VEND_HIER3 group_table where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and  rawview.HIER3_ID = group_table.HIER3_ID and group_table.GROUP_NAME = '{-master-LTEHFAGroup}' and rawview.EVENT_ID = 4104  ]]></SqlTest>
+<Validate>execSoneOut = sqlExecSoneOut, impactedSub = sqlImapctedSubs</Validate>
+</RepeatValidation>
+<Validate>sort{eventVolumeTime} = asc</Validate>
+<RepeatDrillDown instruction="all">2</RepeatDrillDown>
+</TestCase>
+
+<!--__________________________________________________________Chart View__________________________________________________________-->
+
+<TestCase id="2">
+<Direction>Drill On Chart View </Direction>
+<Url><![CDATA[NETWORK/LTE_HFA_EVENT_VOLUME/EVENT_VOLUME?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&type=BSC&groupname={-master-LTEHFAGroup}&display=chart&tzOffset=%2B0530&maxRows=500]]></Url>
+<JSONVariables>1:eventVolumeTime,2:prepXtwoIn,3:prepXtwoOut,4:execXtwoIn,5:execXtwoOut,6:prepSoneIn,7:prepSoneOut,8:execSoneIn,9:execSoneOut,10:impactedSub</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[ select isnull(count(*), 0) as 'sqlPrepXtwoIn',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from EVENT_E_LTE_HFA_ERR_RAW as rawview,GROUP_TYPE_E_RAT_VEND_HIER3 as group_table where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.HIER3_ID = group_table.HIER3_ID and group_table.GROUP_NAME = '{-master-LTEHFAGroup}' and rawview.EVENT_ID = 4111]]></SqlTest>
+<Validate>prepXtwoIn = sqlPrepXtwoIn, impactedSub = sqlImapctedSubs</Validate>
+
+<SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlPrepXtwoOut',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from dc.EVENT_E_LTE_HFA_ERR_RAW rawview,GROUP_TYPE_E_RAT_VEND_HIER3 group_table where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and  rawview.HIER3_ID = group_table.HIER3_ID and group_table.GROUP_NAME = '{-master-LTEHFAGroup}' and rawview.EVENT_ID = 4110  ]]></SqlTest>
+<Validate>prepXtwoOut = sqlPrepXtwoOut, impactedSub = sqlImapctedSubs</Validate>
+
+<SqlTest><![CDATA[select  isnull(count(*), 0) as 'sqlexecXtwoIn',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from dc.EVENT_E_LTE_HFA_ERR_RAW rawview,GROUP_TYPE_E_RAT_VEND_HIER3 group_table where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and  rawview.HIER3_ID = group_table.HIER3_ID and group_table.GROUP_NAME = '{-master-LTEHFAGroup}' and rawview.EVENT_ID = 4113  ]]></SqlTest>
+<Validate>execXtwoIn = sqlexecXtwoIn, impactedSub = sqlImapctedSubs</Validate>
+
+<SqlTest><![CDATA[select  isnull(count(*), 0) as 'sqlexecXtwoOut',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from dc.EVENT_E_LTE_HFA_ERR_RAW rawview,GROUP_TYPE_E_RAT_VEND_HIER3 group_table where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and  rawview.HIER3_ID = group_table.HIER3_ID and group_table.GROUP_NAME = '{-master-LTEHFAGroup}' and rawview.EVENT_ID = 4112  ]]></SqlTest>
+<Validate>execXtwoOut = sqlexecXtwoOut, impactedSub = sqlImapctedSubs</Validate>
+
+<SqlTest><![CDATA[select  isnull(count(*), 0) as 'sqlPrepSoneIn',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from dc.EVENT_E_LTE_HFA_ERR_RAW rawview,GROUP_TYPE_E_RAT_VEND_HIER3 group_table where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and  rawview.HIER3_ID = group_table.HIER3_ID and group_table.GROUP_NAME = '{-master-LTEHFAGroup}' and rawview.EVENT_ID = 4103  ]]></SqlTest>
+<Validate>prepSoneIn = sqlPrepSoneIn, impactedSub = sqlImapctedSubs</Validate>
+
+<SqlTest><![CDATA[select  isnull(count(*), 0) as 'sqlPrepSoneOut',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from dc.EVENT_E_LTE_HFA_ERR_RAW rawview,GROUP_TYPE_E_RAT_VEND_HIER3 group_table where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and  rawview.HIER3_ID = group_table.HIER3_ID and group_table.GROUP_NAME = '{-master-LTEHFAGroup}' and rawview.EVENT_ID = 4102  ]]></SqlTest>
+<Validate>prepSoneOut = sqlPrepSoneOut, impactedSub = sqlImapctedSubs</Validate>
+
+<SqlTest><![CDATA[select  isnull(count(*), 0) as 'sqlExecSoneIn',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from dc.EVENT_E_LTE_HFA_ERR_RAW rawview,GROUP_TYPE_E_RAT_VEND_HIER3 group_table where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and  rawview.HIER3_ID = group_table.HIER3_ID and group_table.GROUP_NAME = '{-master-LTEHFAGroup}' and rawview.EVENT_ID = 4105  ]]></SqlTest>
+<Validate>execSoneIn = sqlExecSoneIn, impactedSub = sqlImapctedSubs</Validate>
+
+<SqlTest><![CDATA[select  isnull(count(*), 0) as 'sqlExecSoneOut',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from dc.EVENT_E_LTE_HFA_ERR_RAW rawview,GROUP_TYPE_E_RAT_VEND_HIER3 group_table where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and  rawview.HIER3_ID = group_table.HIER3_ID and group_table.GROUP_NAME = '{-master-LTEHFAGroup}' and rawview.EVENT_ID = 4104  ]]></SqlTest>
+<Validate>execSoneOut = sqlExecSoneOut, impactedSub = sqlImapctedSubs</Validate>
+</RepeatValidation>
+<Validate>sort{eventVolumeTime} = asc</Validate>
+</TestCase>
+</TestSuite>

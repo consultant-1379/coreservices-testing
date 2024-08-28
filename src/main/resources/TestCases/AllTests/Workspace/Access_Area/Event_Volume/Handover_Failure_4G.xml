@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<!--__________________________________________________________Grid View__________________________________________________________-->
+
+<TestCase id="1">
+    <Direction>Launch -> Access Area -> Event Volume -> HandOver Failure(4G)</Direction>
+    <Url><![CDATA[NETWORK/LTE_HFA_EVENT_VOLUME/EVENT_VOLUME?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&type=CELL&node={-master-LTEHFAAccessAreaNode}&display=grid&tzOffset=%2B0530&maxRows=500]]></Url>
+    <JSONVariables>1:eventVolumeTime,2:prepxTwoin,3:prepxTwoout,4:execxTwoin,5:execxTwoout,6:prepsOnein,7:prepsOneout,8:execsOnein,9:execsOneout,10:impactedSubs</JSONVariables>
+     <RepeatValidation instruction="all">
+        <SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlprepxIIin',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and HIER321_ID IN (SELECT HIER321_ID FROM DIM_E_LTE_HIER321, DIM_E_SGEH_RAT as dimRAT WHERE HIERARCHY_1+','+HIERARCHY_2+','+ +HIERARCHY_3+','+ VENDOR+','+RAT_DESC LIKE '%{-master-LTEHFAAccessAreaNode}%') and rawview.event_id = 4111]]></SqlTest>
+        <Validate>prepxTwoin=sqlprepxIIin, impactedSubs=sqlImapctedSubs </Validate>
+        <SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlprepxIIout',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and HIER321_ID IN (SELECT HIER321_ID FROM DIM_E_LTE_HIER321, DIM_E_SGEH_RAT as dimRAT WHERE HIERARCHY_1+','+HIERARCHY_2+','+ +HIERARCHY_3+','+ VENDOR+','+RAT_DESC LIKE '%{-master-LTEHFAAccessAreaNode}%') and rawview.event_id = 4110]]></SqlTest>
+        <Validate>prepxTwoout=sqlprepxIIout, impactedSubs=sqlImapctedSubs</Validate>
+        <SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlexecxIIin',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and HIER321_ID IN (SELECT HIER321_ID FROM DIM_E_LTE_HIER321, DIM_E_SGEH_RAT as dimRAT WHERE HIERARCHY_1+','+HIERARCHY_2+','+ +HIERARCHY_3+','+ VENDOR+','+RAT_DESC LIKE '%{-master-LTEHFAAccessAreaNode}%') and rawview.event_id = 4113]]></SqlTest>
+        <Validate>execxTwoin=sqlexecxIIin, impactedSubs=sqlImapctedSubs</Validate>
+        <SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlexecxIIout',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and HIER321_ID IN (SELECT HIER321_ID FROM DIM_E_LTE_HIER321, DIM_E_SGEH_RAT as dimRAT WHERE HIERARCHY_1+','+HIERARCHY_2+','+ +HIERARCHY_3+','+ VENDOR+','+RAT_DESC LIKE '%{-master-LTEHFAAccessAreaNode}%') and rawview.event_id = 4112]]></SqlTest>
+        <Validate>execxTwoout=sqlexecxIIout, impactedSubs=sqlImapctedSubs</Validate>
+        <SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlprepsIin',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and HIER321_ID IN (SELECT HIER321_ID FROM DIM_E_LTE_HIER321, DIM_E_SGEH_RAT as dimRAT WHERE HIERARCHY_1+','+HIERARCHY_2+','+ +HIERARCHY_3+','+ VENDOR+','+RAT_DESC LIKE '%{-master-LTEHFAAccessAreaNode}%') and rawview.event_id = 4103]]></SqlTest>
+        <Validate>prepsOnein=sqlprepsIin, impactedSubs=sqlImapctedSubs</Validate>
+        <SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlprepsIout',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and HIER321_ID IN (SELECT HIER321_ID FROM DIM_E_LTE_HIER321, DIM_E_SGEH_RAT as dimRAT WHERE HIERARCHY_1+','+HIERARCHY_2+','+ +HIERARCHY_3+','+ VENDOR+','+RAT_DESC LIKE '%{-master-LTEHFAAccessAreaNode}%') and rawview.event_id = 4102]]></SqlTest>
+        <Validate>prepsOneout=sqlprepsIout, impactedSubs=sqlImapctedSubs</Validate>
+        <SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlexecsIin',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and HIER321_ID IN (SELECT HIER321_ID FROM DIM_E_LTE_HIER321, DIM_E_SGEH_RAT as dimRAT WHERE HIERARCHY_1+','+HIERARCHY_2+','+ +HIERARCHY_3+','+ VENDOR+','+RAT_DESC LIKE '%{-master-LTEHFAAccessAreaNode}%') and rawview.event_id = 4105]]></SqlTest>
+        <Validate>execsOnein=sqlexecsIin, impactedSubs=sqlImapctedSubs</Validate>
+        <SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlexecsIout',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and HIER321_ID IN (SELECT HIER321_ID FROM DIM_E_LTE_HIER321, DIM_E_SGEH_RAT as dimRAT WHERE HIERARCHY_1+','+HIERARCHY_2+','+ +HIERARCHY_3+','+ VENDOR+','+RAT_DESC LIKE '%{-master-LTEHFAAccessAreaNode}%') and rawview.event_id = 4104]]></SqlTest>
+        <Validate>execsOneout=sqlexecsIout, impactedSubs=sqlImapctedSubs</Validate>
+    </RepeatValidation> 
+    <Validate>sort{eventVolumeTime} = asc</Validate>
+    <RepeatDrillDown instruction="all">2</RepeatDrillDown>
+</TestCase>
+
+<!--__________________________________________________________Chart View__________________________________________________________-->
+
+ <TestCase id="2">
+    <Direction>Click on Chart view</Direction>
+    <Url><![CDATA[NETWORK/LTE_HFA_EVENT_VOLUME/EVENT_VOLUME?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&type=CELL&node={-master-LTEHFAAccessAreaNode}&display=grid&tzOffset=%2B0530&maxRows=500]]></Url>
+    <JSONVariables>1:eventVolumeTime,2:prepxTwoin,3:prepxTwoout,4:execxTwoin,5:execxTwoout,6:prepsOnein,7:prepsOneout,8:execsOnein,9:execsOneout,10:impactedSubs</JSONVariables>
+    <RepeatValidation instruction="all">
+        <SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlprepxIIin',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and HIER321_ID IN (SELECT HIER321_ID FROM DIM_E_LTE_HIER321, DIM_E_SGEH_RAT as dimRAT WHERE HIERARCHY_1+','+HIERARCHY_2+','+ +HIERARCHY_3+','+ VENDOR+','+RAT_DESC LIKE '%{-master-LTEHFAAccessAreaNode}%') and rawview.event_id = 4111]]></SqlTest>
+        <Validate>prepxTwoin=sqlprepxIIin, impactedSubs=sqlImapctedSubs</Validate>
+        <SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlprepxIIout',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and HIER321_ID IN (SELECT HIER321_ID FROM DIM_E_LTE_HIER321, DIM_E_SGEH_RAT as dimRAT WHERE HIERARCHY_1+','+HIERARCHY_2+','+ +HIERARCHY_3+','+ VENDOR+','+RAT_DESC LIKE '%{-master-LTEHFAAccessAreaNode}%') and rawview.event_id = 4110]]></SqlTest>
+        <Validate>prepxTwoout=sqlprepxIIout, impactedSubs=sqlImapctedSubs</Validate>
+        <SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlexecxIIin',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and HIER321_ID IN (SELECT HIER321_ID FROM DIM_E_LTE_HIER321, DIM_E_SGEH_RAT as dimRAT WHERE HIERARCHY_1+','+HIERARCHY_2+','+ +HIERARCHY_3+','+ VENDOR+','+RAT_DESC LIKE '%{-master-LTEHFAAccessAreaNode}%') and rawview.event_id = 4113]]></SqlTest>
+        <Validate>execxTwoin=sqlexecxIIin, impactedSubs=sqlImapctedSubs</Validate>
+        <SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlexecxIIout',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and HIER321_ID IN (SELECT HIER321_ID FROM DIM_E_LTE_HIER321, DIM_E_SGEH_RAT as dimRAT WHERE HIERARCHY_1+','+HIERARCHY_2+','+ +HIERARCHY_3+','+ VENDOR+','+RAT_DESC LIKE '%{-master-LTEHFAAccessAreaNode}%') and rawview.event_id = 4112]]></SqlTest>
+        <Validate>execxTwoout=sqlexecxIIout, impactedSubs=sqlImapctedSubs</Validate>
+        <SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlprepsIin',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and HIER321_ID IN (SELECT HIER321_ID FROM DIM_E_LTE_HIER321, DIM_E_SGEH_RAT as dimRAT WHERE HIERARCHY_1+','+HIERARCHY_2+','+ +HIERARCHY_3+','+ VENDOR+','+RAT_DESC LIKE '%{-master-LTEHFAAccessAreaNode}%') and rawview.event_id = 4103]]></SqlTest>
+        <Validate>prepsOnein=sqlprepsIin, impactedSubs=sqlImapctedSubs</Validate>
+        <SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlprepsIout',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and HIER321_ID IN (SELECT HIER321_ID FROM DIM_E_LTE_HIER321, DIM_E_SGEH_RAT as dimRAT WHERE HIERARCHY_1+','+HIERARCHY_2+','+ +HIERARCHY_3+','+ VENDOR+','+RAT_DESC LIKE '%{-master-LTEHFAAccessAreaNode}%') and rawview.event_id = 4102]]></SqlTest>
+        <Validate>prepsOneout=sqlprepsIout, impactedSubs=sqlImapctedSubs</Validate>
+        <SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlexecsIin',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and HIER321_ID IN (SELECT HIER321_ID FROM DIM_E_LTE_HIER321, DIM_E_SGEH_RAT as dimRAT WHERE HIERARCHY_1+','+HIERARCHY_2+','+ +HIERARCHY_3+','+ VENDOR+','+RAT_DESC LIKE '%{-master-LTEHFAAccessAreaNode}%') and rawview.event_id = 4105]]></SqlTest>
+        <Validate>execsOnein=sqlexecsIin, impactedSubs=sqlImapctedSubs</Validate>
+        <SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlexecsIout',isnull(count(distinct(imsi)),0) as 'sqlImapctedSubs' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and HIER321_ID IN (SELECT HIER321_ID FROM DIM_E_LTE_HIER321, DIM_E_SGEH_RAT as dimRAT WHERE HIERARCHY_1+','+HIERARCHY_2+','+ +HIERARCHY_3+','+ VENDOR+','+RAT_DESC LIKE '%{-master-LTEHFAAccessAreaNode}%') and rawview.event_id = 4104]]></SqlTest>
+        <Validate>execsOneout=sqlexecsIout, impactedSubs=sqlImapctedSubs</Validate>
+    </RepeatValidation>
+    <Validate>sort{eventVolumeTime} = asc</Validate>
+</TestCase>
+
+</TestSuite>

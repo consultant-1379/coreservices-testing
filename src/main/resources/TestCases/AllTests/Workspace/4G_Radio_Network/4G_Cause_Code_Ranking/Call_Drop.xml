@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<TestCase id="1">
+<Direction>Launch -> 4G Radio Network -> 4G Cause Code Ranking -> Call Drops</Direction>
+<Url><![CDATA[NETWORK/LTE_CALL_FAILURE_RANKING_ANALYSIS/CAUSECODE/CALL_DROP?time={time}&display=grid&tzOffset=%2B0530&maxRows=50]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=%2B0530&dataTimeFrom={time}&dataTimeTo={time}&userName=admin&url=NETWORK/LTE_CALL_FAILURE_RANKING_ANALYSIS/CAUSECODE/CALL_DROP&maxRows=0]]></CSVUrl>
+ <IgnoredInCsv>4:causeCodeId</IgnoredInCsv>
+<JSONVariables>1:rank,2:eventType,3:causeCodeDescription,4:causeCodeId,5:failuresNo</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count(*) as 'sqlFailure' from dc.EVENT_E_LTE_CFA_ERR_RAW where CATEGORY_ID = 0 and CAUSE_CODE is not null and DATETIME_ID >= '2015-03-04 00:00' and DATETIME_ID < '2015-03-09 00:00' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') AND CAUSE_CODE = {causeCodeId} AND event_id in (Select distinct event_id from dim_e_lte_cfa_eventtype where event_id_desc = '{eventType}' AND CATEGORY_ID = 0)]]></SqlTest>
+<Validate>failuresNo = sqlFailure</Validate>
+<Validate><![CDATA[ rank < 50 ]]></Validate>
+</RepeatValidation>
+<Validate>sort{rank} = asc</Validate>
+<Validate>sort{failuresNo} = desc</Validate>
+</TestCase>
+</TestSuite>

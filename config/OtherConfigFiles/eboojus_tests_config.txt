@@ -1,0 +1,9 @@
+AllTests\Workspace\Access_Area\Cause_Code_Analysis\Core_PS.xml
+AllTests\Workspace\Access_Area\Network_Event_Analysis\Core_PS.xml
+AllTests\Workspace\Access_Area\QOS\Core_PS.xml
+AllTests\Workspace\Access_Area_Group\Cause_Code_Analysis\Core_PS.xml
+AllTests\Workspace\Access_Area_Group\Network_Event_Analysis\Core_PS.xml
+AllTests\Workspace\Access_Area_Group\QOS\Core_PS.xml
+AllTests\Workspace\IMSI\Subscriber_Overview\Core_PS.xml
+AllTests\Workspace\PTMSI\Subscriber_Overview\Core_PS.xml
+AllTests\Workspace\IMSI_Group\Subscriber_Overview\Core_PS.xml

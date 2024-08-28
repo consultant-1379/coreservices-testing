@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TestSuite> 
+
+<TestCase id="1"> 
+
+<Direction>Launch -> Core(PS) Network -> Core Ranking -> Terminal</Direction> 
+<Url><![CDATA[NETWORK/RANKING_ANALYSIS?time=10080&display=grid&type=TAC&tzOffset=+0100&maxRows=50]]></Url> 
+<JSONVariables>1:rank,2:manufacturer,3:model,4:tac,5:failures,6:successes</JSONVariables>  
+<RepeatValidation instruction="all"> 
+	<SqlTest instruction="plus:sgeh"><![CDATA[SELECT count(*) as 'sqlFailures' FROM EVENT_E_LTE_ERR_RAW WHERE DATETIME_ID >= '2014-05-29 00:00' AND DATETIME_ID < '2014-06-05 00:00' AND TAC = {tac} and tac not in (select TAC from group_type_e_tac where group_name = 'EXCLUSIVE TAC') ]]></SqlTest> 
+	<Validate>failures = sqlFailures</Validate> 
+	<SqlTest instruction="plus:sgeh"><![CDATA[SELECT SUM(NO_OF_SUCCESSES) as 'sqlSuccesses' FROM EVENT_e_lte_imsi_suc_raw WHERE DATETIME_ID >= '2014-05-29 00:00' AND DATETIME_ID < '2014-06-05 00:00' AND TAC = {tac} and tac not in (select TAC from group_type_e_tac where group_name = 'EXCLUSIVE TAC') ]]></SqlTest> 
+	<Validate>successes = sqlSuccesses</Validate> 
+</RepeatValidation>  
+<RepeatDrillDown instruction="all">2</RepeatDrillDown> 
+<PassToDrillDown id="2">manufacturer,failures</PassToDrillDown>
+</TestCase> 
+
+<TestCase id="2"> 
+<Direction>Drill on Manufacturer</Direction> 
+<Url><![CDATA[TERMINAL/EVENT_ANALYSIS?time=30&manufacturer={1.manufacturer}&type=MANUFACTURER&display=grid&key=SUM&tzOffset=+0100&maxRows=50]]></Url> 
+<JSONVariables>1:manufacturer,2:eventId,3:eventType,4:failures,5:successes,6:totalEvents,7:successRatio,8:impactedSubscriber</JSONVariables> 
+<RepeatValidation instruction="all"> 
+	<SqlTest instruction="Use:eventId"><![CDATA[select count(*) as 'sqlFailures' from EVENT_E_LTE_err_raw where (tac in (select tac from dc.dim_e_sgeh_tac where manufacturer = '{1.manufacturer}') or tac = convert(int,'{1.manufacturer}')) and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') and event_id = {eventId}]]></SqlTest> 
+	<Validate>failures = sqlFailures</Validate> 
+	<SqlTest instruction="Use:eventId"><![CDATA[select sum(no_of_successes) as 'sqlSuccess' from event_e_lte_imsi_suc_raw where (tac in (select tac from dc.dim_e_sgeh_tac where manufacturer = '{1.manufacturer}') or tac = convert(int,'{1.manufacturer}')) and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and event_id = {eventId} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') ]]></SqlTest> 
+	<Validate>successes = sqlSuccess</Validate> 
+	<Validate>successes + failures = totalEvents</Validate> 
+	<Validate>( successes / totalEvents ) * 100 = successRatio</Validate>
+	<SqlTest instruction="Use:eventId"><![CDATA[select count(distinct(IMSI)) as 'sqlImpactedSbs' from EVENT_E_SGEH_ERR_RAW where (tac in (select tac from dc.dim_e_sgeh_tac where manufacturer = '{1.manufacturer}') or tac = convert(int,'{1.manufacturer}')) and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') and event_id = {eventId}]]></SqlTest>
+             <Validate>impactedSubscriber = sqlImpactedSbs</Validate>
+</RepeatValidation> 
+<RepeatDrillDown instruction="all">3</RepeatDrillDown>
+<PassToDrillDown id="3">eventId,manufacturer,failures</PassToDrillDown>
+</TestCase> 
+
+<TestCase id="3">
+<PreCondition>2.failures > 0</PreCondition>
+<Direction>Launch -> Core(PS) Network -> Core Ranking -> Terminal -> Drill on Manufacturer -> Drill on Failures</Direction>
+<Url><![CDATA[TERMINAL/EVENT_ANALYSIS?time=10080&display=grid&tzOffset=+0100&maxRows=500&type=MANUFACTURER&key=ERR&manufacturer={2.manufacturer}&eventID={2.eventId}]]></Url>
+<JSONVariables>1:eventTime,4:tac,5:terminalMake,6:terminalModel,7:eventType,8:eventResult,10:causeCode,12:SubCauseCode,14:SGSNMME,16:controller,18:AccessArea,19:RanVendor,57:APN,76:RatId</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest instruction="Use:RatId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', hierarchy_3 as 'sqlHierarchy_3', hierarchy_1 as 'sqlHierarchy_1', event_id as 'sqlEventID', vendor as 'sqlVendor' , rat as 'sqlRatID' from event_e_lte_err_raw where event_time = '{eventTime}' and cause_code = {causeCode} and subcause_code = {SubCauseCode} and hierarchy_1 = '{AccessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00']]></SqlTest> 
+<Validate>tac = sqlTac,SGSNMME = sqlEventSourceName,controller = sqlHierarchy_3,RatId = sqlRatID,AccessArea = sqlHierarchy_1,2.eventId = sqlEventID,RanVendor = sqlVendor</Validate> 
+</RepeatValidation> 
+<Validate>2.failures = count{eventTime}</Validate>
+<RepeatDrillDown instruction="all">4</RepeatDrillDown>
+<PassToDrillDown id="4">APN</PassToDrillDown>
+</TestCase>
+
+<TestCase id="4">
+<Direction>Launch -> Core(PS) Network -> Core Ranking -> Terminal -> Drill on Manufacturer -> Drill on Failures -> Drill on APN</Direction>
+<Url><![CDATA[NETWORK/EVENT_ANALYSIS?dateFrom=24062014&dateTo=24062014&timeFrom=1315&timeTo=1345&display=grid&tzOffset=+0530&maxRows=500&key=SUM&type=APN&apn={3.APN}]]></Url>
+<JSONVariables>1:APN,2:eventId,3:eventType,4:failures,5:successes,6:totalEvents,7:successRatio,8:impactedSubscriber</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest instruction="Use:eventId"><![CDATA[select count(*) as 'sqlFailures' from event_e_lte_err_raw where apn = '{3.APN}' and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') and event_id = {eventId}]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+<SqlTest instruction="Use:eventId"><![CDATA[select SUM(NO_OF_Successes) as 'sqlSuccess' from EVENT_E_LTE_imsi_suc_raw where apn = '{3.APN}' and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and event_id = {eventId}]]></SqlTest>
+<Validate>successes = sqlSuccess</Validate>
+<SqlTest instruction="Use:eventId"><![CDATA[select count(distinct(imsi)) as 'sqlImpacted' from event_e_lte_err_raw where apn = '{APN}' and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and event_id = {eventId} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>impactedSubscriber = sqlImpacted</Validate>
+<Validate>successes + failures = totalEvents</Validate>
+<Validate>( successes / totalEvents ) * 100 = successRatio</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">5</RepeatDrillDown>
+<PassToDrillDown id="5">APN,failures,successes,eventId</PassToDrillDown>          
+</TestCase>
+             
+<TestCase id="5">
+<PreCondition>4.failures > 0</PreCondition>
+<Direction>Drill on Failures</Direction>
+<Url><![CDATA[NETWORK/EVENT_ANALYSIS?dateFrom=20062014&dateTo=20062014&timeFrom=1330&timeTo=1400&display=grid&tzOffset=+0100&maxRows=500&key=ERR&type=APN&dataTieredDelay=true&apn={4.APN}&eventID={4.eventId}]]></Url>
+<JSONVariables>1:eventTime,4:tac,5:terminalMake,6:terminalModel,7:eventType,8:eventResult,10:causeCode,12:SubCauseCode,14:SGSNMME,16:controller,18:AccessArea,19:RanVendor,57:APN,76:RatId</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest instruction="Use:RatId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', hierarchy_3 as 'sqlHierarchy_3', hierarchy_1 as 'sqlHierarchy_1', event_id as 'sqlEventID', vendor as 'sqlVendor' , rat as 'sqlRatID' from event_e_lte_err_raw where event_time = '{eventTime}' and cause_code = {causeCode} and subcause_code = {SubCauseCode} and hierarchy_1 = '{AccessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00']]></SqlTest> 
+<Validate>tac = sqlTac,SGSNMME = sqlEventSourceName,controller = sqlHierarchy_3,RatId = sqlRatID,AccessArea = sqlHierarchy_1,4.eventId = sqlEventID,RanVendor = sqlVendor</Validate> 
+</RepeatValidation>
+<Validate>4.failures = count{eventTime}</Validate>
+</TestCase>        
+
+</TestSuite>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<TestCase id="1">
+   <MaxValidation>4</MaxValidation>
+   <Direction>Launch -> Access Area Group -> Network Event Analysis ->HandOver Failure(3G) </Direction>
+   <Url><![CDATA[NETWORK/WCDMA_HANDOVER_FAILURE_NETWORK_EVENT_ANALYSIS/NODE?dateFrom=21012015&dateTo=21012015&timeFrom=1400&timeTo=1430&type=CELL&groupname=access_area_grp&display=grid&tzOffset=%2B0530&maxRows=30]]></Url>
+   <JSONVariables>1:accessAreaGrp,2:handoverFailuretype,3:categoryId,6:targetFailure</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest instruction="Use:categoryId"><![CDATA[select count(*) as 'sqlFailure' from EVENT_E_RAN_HFA_SOHO_ERR_RAW as RAW, GROUP_TYPE_E_RAT_VEND_HIER321_CELL RAT where RAT.GROUP_NAME = 'access_area_grp' and RAW.THIER3_CELL_ID = RAT.HIER3_CELL_ID and DATETIME_ID >= '2015-01-21 14:00' and DATETIME_ID < '2015-01-21 14:30' and ISNULL(RAW.TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') ]]></SqlTest>
+   <Validate>targetFailure = sqlFailure</Validate>
+   </RepeatValidation>
+   <RepeatDrillDown instruction="all">2,3,4</RepeatDrillDown>
+   <PassToDrillDown id="2">targetFailure,categoryId</PassToDrillDown>
+   <PassToDrillDown id="3">targetFailure,categoryId</PassToDrillDown>
+   <PassToDrillDown id="4">targetFailure,categoryId</PassToDrillDown>
+   </TestCase>
+
+
+   <TestCase id="2">
+   <Precondition>1.categoryId = 0</Precondition>
+   <Direction>Drill on Target Failures(SOHO)</Direction>
+   <Url><![CDATA[NETWORK/WCDMA_HANDOVER_FAILURE_DETAILED_EVENT_ANALYSIS/NODE?dateFrom=21012015&dateTo=21012015&timeFrom=1400&timeTo=1430&display=grid&tzOffset=%2B0530&maxRows=30&groupname=access_area_grp&categoryId=0&type=CELL&cellType=TARGET]]></Url>
+   <SqlTest><![CDATA[select count(*) as 'sqlFailure' from EVENT_E_RAN_HFA_SOHO_ERR_RAW as SOHO, GROUP_TYPE_E_RAT_VEND_HIER321_CELL as RAT where RAT.GROUP_NAME = 'access_area_grp' and SOHO.THIER3_CELL_ID = RAT.HIER3_CELL_ID and DATETIME_ID >= '2015-01-21 14:00' and DATETIME_ID < '2015-01-21 14:30' and ISNULL(SOHO.TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+   <Validate>1.targetFailure = sqlFailure</Validate>
+   </TestCase>
+
+   <TestCase id="3">
+   <Precondition>1.categoryId = 1</Precondition>
+   <Direction>Drill on Target Failures(HSDSCH)</Direction>
+   <Url><![CDATA[NETWORK/WCDMA_HANDOVER_FAILURE_DETAILED_EVENT_ANALYSIS/NODE?dateFrom=21012015&dateTo=21012015&timeFrom=1400&timeTo=1430&display=grid&tzOffset=%2B0530&maxRows=30&groupname=access_area_grp&categoryId=1&type=CELL&cellType=TARGET]]></Url>
+   <SqlTest><![CDATA[ select count(*) as 'sqlFailures' from EVENT_E_RAN_HFA_HSDSCH_ERR_RAW as HSDSCH, GROUP_TYPE_E_RAT_VEND_HIER321_CELL as RAT where RAT.GROUP_NAME = 'access_area_grp' and HSDSCH.THIER3_CELL_ID = RAT.HIER3_CELL_ID and DATETIME_ID >= '2015-01-21 14:00' and DATETIME_ID < '2015-01-21 14:30' and ISNULL(HSDSCH.TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+   <Validate>1.targetFailure = sqlFailures</Validate>
+   </TestCase>
+
+   <TestCase id="4">
+   <Precondition>1.categoryId = 2</Precondition>
+   <Direction>Drill on Target Failures(IFHO)</Direction>
+   <Url><![CDATA[NETWORK/WCDMA_HANDOVER_FAILURE_DETAILED_EVENT_ANALYSIS/NODE?dateFrom=21012015&dateTo=21012015&timeFrom=1400&timeTo=1430&display=grid&tzOffset=%2B0530&maxRows=30&groupname=access_area_grp&categoryId=2&type=CELL&cellType=TARGET]]></Url>
+   <SqlTest><![CDATA[ select count(*) as 'sqlFailures' from EVENT_E_RAN_HFA_IFHO_ERR_RAW IFHO,GROUP_TYPE_E_RAT_VEND_HIER321_CELL RAT where RAT.GROUP_NAME = 'access_area_grp' and IFHO.THIER3_CELL_ID = RAT.HIER3_CELL_ID and DATETIME_ID >= '2015-01-21 08:30' and DATETIME_ID < '2015-01-21 09:00' and ISNULL(IFHO.TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+   <Validate>1.targetFailure = sqlFailures</Validate>
+   </TestCase>
+
+   </TestSuite>
+
+
+
+

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TestSuite>
+<TestCase id="1">
+<Direction>Launch -> Controller Group -> Cause Code Analysis -> Call Failure 4G</Direction>
+<Url><![CDATA[NETWORK/LTE_CFA_CAUSE_CODE_ANALYSIS/PIE_CHART_CC_LIST?type=BSC&groupname={-master-LTEHFAGroup}&time={time}&tzOffset=%2B0530]]></Url>
+<JSONVariables>1:CC,2:ccDesc</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count (*) as 'sqlcauseCode' from (select count (distinct CAUSE_CODE) as a from dc.EVENT_E_LTE_CFA_ERR_RAW as errRef, dc.GROUP_TYPE_E_RAT_VEND_HIER3 enodeBGroup where enodeBGroup.GROUP_NAME = '{-master-LTEHFAGroup}' and enodeBGroup.HIER3_ID = errRef.HIER3_ID and DATETIME_ID >= '2015-02-13 09:10' and DATETIME_ID < '2015-02-13 09:40' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and errRef.CAUSE_CODE is not null group by CAUSE_CODE, EVENT_ID) as number]]></SqlTest>
+<Validate>count{CC} = sqlcauseCode</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">2,4</RepeatDrillDown>
+<PassToDrillDown id="4">CC</PassToDrillDown>
+</TestCase>
+
+<!--__________________________________________________________Grid View__________________________________________________________-->
+
+<TestCase id="2">
+<Direction>Click on Grid View</Direction>
+<Url><![CDATA[NETWORK/LTE_CFA_CAUSE_CODE_ANALYSIS/CAUSE_CODE_ANALYSIS?time={time}&type=BSC&groupname={-master-LTEHFAGroup}&display=grid&tzOffset=%2B0530&maxRows=500]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?type=BSC&groupname={-master-LTEHFAGroup}&display=grid&tzOffset=%2B0530&dataTimeFrom={time}&dataTimeTo={time}&userName=admin&url=NETWORK/LTE_CFA_CAUSE_CODE_ANALYSIS/CAUSE_CODE_ANALYSIS&maxRows=0]]></CSVUrl>
+<IgnoredInCsv>1:groupName,2:eventID,4:CCID</IgnoredInCsv>
+<JSONVariables>1:groupName,2:eventID,3:eventType,4:CCID,5:CCDesc,6:occurrence,7:impacSubs</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count (*) as 'sqlOccurence' from EVENT_E_LTE_CFA_ERR_RAW,GROUP_TYPE_E_RAT_VEND_HIER3 group_table where  DATETIME_ID >= '2015-02-13 06:45' and DATETIME_ID < '2015-02-13 07:15' and ISNULL(EVENT_E_LTE_CFA_ERR_RAW.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and EVENT_E_LTE_CFA_ERR_RAW.HIER3_ID = group_table.HIER3_ID and CAUSE_CODE is not null and event_id = {eventID} and cause_code = {CCID} and group_table.GROUP_NAME = '{-master-LTEHFAGroup}']]></SqlTest>
+<Validate>occurrence = sqlOccurence</Validate>
+<SqlTest><![CDATA[select count (distinct imsi) as 'sqlImpacsubs' from EVENT_E_LTE_CFA_ERR_RAW,GROUP_TYPE_E_RAT_VEND_HIER3 group_table where  DATETIME_ID >= '2015-02-13 06:45' and DATETIME_ID < '2015-02-13 07:15' and ISNULL(EVENT_E_LTE_CFA_ERR_RAW.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and EVENT_E_LTE_CFA_ERR_RAW.HIER3_ID = group_table.HIER3_ID and CAUSE_CODE is not null and event_id = {eventID} and cause_code = {CCID} and group_table.GROUP_NAME = '{-master-LTEHFAGroup}' ]]></SqlTest>
+<Validate>impacSubs = sqlImpacsubs</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">3</RepeatDrillDown>
+<PassToDrillDown id="3">eventID,occurrence,CCID,groupName</PassToDrillDown>
+</TestCase>
+
+<TestCase id="3">
+<Precondition> 2.occurrence > 0 </Precondition>
+<Direction>Drill On occurrence</Direction><!-- csv export validation for detailed window will be cover under jiraNO:EQEV-26708 -->
+<Url><![CDATA[NETWORK/LTE_CALL_FAILURE_DETAILED_EVENT_ANALYSIS/CAUSE_CODE_ENODEB?time={time}&display=grid&tzOffset=%2B0530&maxRows=500&groupname={2.groupName}&eventID={2.eventID}&causeCode={2.CCID}]]></Url>
+<JSONVariables>1:hierThreeId,3:eventTime,5:IMSI,6:TAC,7:terminalMake,8:terminalModel,9:eventID</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select isnull(CAST(rawview.imsi as varchar),' ') as 'sqlImsi' ,isnull(cast(rawview.tac as varchar), ' ') as 'sqlTac', case WHEN (rawview.TAC != NULL AND rawview.TAC != 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') ELSE ' ' END AS 'sqlMake', case when (rawview.TAC != NULL AND  rawview.TAC != 0 ) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME,'Model Unknown') when (rawview.TAC = 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME,'Model Invalid') else ' ' end AS 'sqlModel'from (select tac,imsi from EVENT_E_LTE_CFA_ERR_RAW,GROUP_TYPE_E_RAT_VEND_HIER3 group_table where event_time = '{eventTime}'and  DATETIME_ID >= '2015-02-13 06:45' and DATETIME_ID < '2015-02-13 07:15' and EVENT_E_LTE_CFA_ERR_RAW.EVENT_ID = {2.eventID} and EVENT_E_LTE_CFA_ERR_RAW.CAUSE_CODE = {2.CCID} and IMSI={IMSI} and ISNULL(EVENT_E_LTE_CFA_ERR_RAW.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and EVENT_E_LTE_CFA_ERR_RAW.HIER3_ID = group_table.HIER3_ID and group_table.GROUP_NAME = '{2.groupName}')AS rawview, DIM_E_SGEH_TAC WHERE rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+<Validate>IMSI = sqlImsi,terminalMake = sqlMake,terminalModel = sqlModel,TAC = sqlTac</Validate>
+</RepeatValidation>
+<Validate>2.occurrence = count{eventTime}</Validate>
+</TestCase>
+
+__________________________________________________________Chart View__________________________________________________________
+
+<TestCase id="4">
+<Direction>Click on Chart View</Direction>
+<Url><![CDATA[NETWORK/LTE_CFA_CAUSE_CODE_ANALYSIS/PIE_CHART_CAUSE_CODE_ANALYSIS?time={time}&type=BSC&groupname={-master-LTEHFAGroup}&display=chart&tzOffset=%2B0530&maxRows=500&causeCodeIds={1.CC}]]></Url>
+<JSONVariables>1:CCID,2:CCDesc,3:failures,4:impacSubs,5:eventId,8:groupName</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count (*) as 'sqlFailures' from EVENT_E_LTE_CFA_ERR_RAW,GROUP_TYPE_E_RAT_VEND_HIER3 group_table where  DATETIME_ID >= '2015-02-13 06:45' and DATETIME_ID < '2015-02-13 07:15' and ISNULL(EVENT_E_LTE_CFA_ERR_RAW.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and EVENT_E_LTE_CFA_ERR_RAW.HIER3_ID = group_table.HIER3_ID and CAUSE_CODE is not null and event_id = {eventId} and cause_code = {CCID} and group_table.GROUP_NAME = '{groupName}']]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+<SqlTest><![CDATA[select count (distinct imsi) as 'sqlImpacsubs' from EVENT_E_LTE_CFA_ERR_RAW,GROUP_TYPE_E_RAT_VEND_HIER3 group_table where  DATETIME_ID >= '2015-02-13 06:45' and DATETIME_ID < '2015-02-13 07:15' and ISNULL(EVENT_E_LTE_CFA_ERR_RAW.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and EVENT_E_LTE_CFA_ERR_RAW.HIER3_ID = group_table.HIER3_ID and CAUSE_CODE is not null and event_id = {eventId} and cause_code = {CCID} and group_table.GROUP_NAME = '{groupName}' ]]></SqlTest>
+<Validate>impacSubs = sqlImpacsubs</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">5</RepeatDrillDown>
+<PassToDrillDown id="5">CCID,eventId,failures,groupName</PassToDrillDown>
+</TestCase>
+
+<TestCase id="5">
+<Precondition> 4.failures> 0 </Precondition>
+<Direction>Drill on Cause Code Pie Chart</Direction>
+<Url><![CDATA[NETWORK/LTE_CFA_CAUSE_CODE_ANALYSIS/PIE_CHART_CAUSE_CODE_ANALYSIS_DRILLDOWN?time={time}&type=BSC&groupname={4.groupName}&display=grid&causeCode={4.CCID}&eventID={4.eventId}&tzOffset=%2B0530&maxRows=500]]></Url>
+<JSONVariables>1:hierThreeId,3:eventTime,5:IMSI,6:TAC,7:terminalMake,8:terminalModel,9:eventId</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select isnull(CAST(rawview.imsi as varchar),' ') as 'sqlImsi' ,isnull(cast(rawview.tac as varchar), ' ') as 'sqlTac', case WHEN (rawview.TAC != NULL AND rawview.TAC != 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') ELSE ' ' END AS 'sqlMake', case when (rawview.TAC != NULL AND  rawview.TAC != 0 ) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME,'Model Unknown') when (rawview.TAC = 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME,'Model Invalid') else ' ' end AS 'sqlModel' from (select tac,imsi from EVENT_E_LTE_CFA_ERR_RAW,GROUP_TYPE_E_RAT_VEND_HIER3 group_table where event_time = '{eventTime}' and  DATETIME_ID >= '2015-02-13 06:45' and DATETIME_ID < '2015-02-13 07:15' and EVENT_E_LTE_CFA_ERR_RAW.EVENT_ID = {4.eventId} and EVENT_E_LTE_CFA_ERR_RAW.CAUSE_CODE = {4.CCID} and IMSI={IMSI} and ISNULL(EVENT_E_LTE_CFA_ERR_RAW.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and EVENT_E_LTE_CFA_ERR_RAW.HIER3_ID = group_table.HIER3_ID and group_table.GROUP_NAME = '{4.groupName}')AS rawview, DIM_E_SGEH_TAC WHERE rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+<Validate>IMSI = sqlImsi,terminalMake = sqlMake,terminalModel = sqlModel,TAC = sqlTac</Validate>
+</RepeatValidation>
+<Validate>4.failures = count{eventTime}</Validate>
+</TestCase>
+</TestSuite>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+    <TestCase id="1">
+        <Direction>Launch -> Core PS Network -> Data Volume Ranking -> TERMINAL GROUP</Direction>
+        <Url><![CDATA[TERMINAL/DATAVOL_GROUP_RANKING_ANALYSIS?time=10080&display=grid&type=TAC&tzOffset=%2B0530&maxRows=500]]></Url>
+        <CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&type=TAC&tzOffset=%2B0530&dataTimeFrom=1418668200000&dataTimeTo=1419273000000&userName=admin&url=TERMINAL/DATAVOL_GROUP_RANKING_ANALYSIS&maxRows=0]]></CSVUrl>
+        <JSONVariables>1:rank,2:tacGroup,3:totalDataVolume,4:downlinkDataVolume,5:uplinkDataVolume</JSONVariables>
+        <RepeatValidation instruction="all"> 
+            <SqlTest><![CDATA[SELECT  group_name as 'sql_gn' ,convert(decimal(16,2), sum(convert(numeric(16,2),datavol_ul)/1048576))  as 'sqlDataVolUl', convert(decimal(16,2), sum(convert(numeric(16,2),datavol_dl)/1048576))  as 'sqlDataVolDl' from  event_e_dvtp_dt_raw  inner join group_type_e_tac ON event_e_dvtp_dt_raw.tac=group_type_e_tac.tac  and DATETIME_ID >= '2015-01-08 00:00:00' and DATETIME_ID < '2015-01-09 00:00:00' and  EVENT_E_DVTP_DT_RAW.TAC not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')group by group_name]]></SqlTest> 
+            <Validate>downlinkDataVolume = sqlDataVolDl,uplinkDataVolume = sqlDataVolUl</Validate> 
+            <Validate>totalDataVolume = sqlDataVolUl + sqlDataVolDl</Validate>
+        </RepeatValidation>
+        <RepeatDrillDown instruction="all">2</RepeatDrillDown>
+<PassToDrillDown id="2">tacGroup</PassToDrillDown>
+    </TestCase>
+    
+    <TestCase id="2">
+        <Direction>Drill on TERMINAL GROUP</Direction>
+        <Url><![CDATA[NETWORK/NETWORK_DATAVOL_ANALYSIS?dateFrom=16122014&dateTo=23122014&timeFrom=0000&timeTo=0000&type=TAC&groupname={1.tacGroup}&display=grid&tzOffset=%2B0530&maxRows=500]]></Url>
+        <CSVUrl><![CDATA[EniqEventsCSV.jsp?type=TAC&groupname={1.tacGroup}&display=grid&tzOffset=%2B0530&dataTimeFrom=1418668200000&dataTimeTo=1419273000000&userName=admin&url=NETWORK/NETWORK_DATAVOL_ANALYSIS&maxRows=0]]></CSVUrl>
+        <JSONVariables>1:TS,2:downlinkMB,3:uplinkMB,4:downlinkThroughPut,5:uplinkThroughPut,6:noOfSubscriber,7:noOfSessions</JSONVariables>
+        <RepeatValidation instruction="all"> 
+            <SqlTest><![CDATA[select convert(numeric(16,2), MAX(convert(numeric(16,2), DATAVOL_UL)/1048576)) as 'sqlDataVolUl',convert(numeric(16,2), MAX(convert(numeric(16,2), DATAVOL_DL)/1048576)) as 'sqlDataVolDl',(convert(numeric(16,2),(convert(numeric(16,2), SUM(temp_dt.DATAVOL_DL))/1048576*8/(convert(numeric(16,2),SUM(temp_dt.DURATION))/1000)))) as 'sqlThroughPutDl',(convert(numeric(16,2),(convert(numeric(16,2), SUM(temp_dt.DATAVOL_UL))/1048576*8/(convert(numeric(16,2),SUM(temp_dt.DURATION))/1000)))) as 'sqlThroughPutUl',(count (distinct(temp_dt.IMSI))) as 'sqlNoOfSubscriber', (count(distinct temp_dt.PDNID_GGSNIP)) as 'sqlNoOfSession' from EVENT_E_DVTP_DT_RAW temp_dt,GROUP_TYPE_E_TAC temp_group where DATETIME_ID >= '2015-01-08 00:00:00' and DATETIME_ID < '2015-01-09 00:00:00' and temp_dt.TAC = temp_group.TAC AND temp_group.GROUP_NAME = '{1.tacGroup}']]></SqlTest> 
+            <Validate>downlinkMB = sqlDataVolDl,uplinkMB = sqlDataVolUl,downlinkThroughPut = sqlThroughPutDl,uplinkThroughPut = sqlThroughPutUl,noOfSessions = sqlNoOfSession</Validate> 
+        </RepeatValidation>
+     </TestCase>
+</TestSuite>

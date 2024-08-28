@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<TestCase id="1">
+    <Direction>Launch -> Controller -> Network Event Analysis -> CallFailure(3G) -> Packet RAB -> Call Setup Failures</Direction>
+    <Url><![CDATA[NETWORK/WCDMA_CFA_NETWORK_EVENT_ANALYSIS/NODE?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&type=BSC&node={-master-WCDMACFAController}&eventID={-master-WcdmaCallSetupFailureId}&categoryId={-master-CategoryPacketID}&drillCat={-master-drillCatPacketCallSetup}&display=grid&tzOffset=%2B0100&maxRows=500]]></Url>
+    <CSVUrl><![CDATA[EniqEventsCSV.jsp?type=BSC&node={-master-WCDMACFAController}&eventID={-master-WcdmaCallSetupFailureId}&categoryId={-master-CategoryPacketID}&drillCat={-master-drillCatPacketCallSetup}&display=grid&tzOffset=%2B0100&dataTimeFrom={date}&dataTimeTo={date}&userName=admin&url=NETWORK/WCDMA_CFA_NETWORK_EVENT_ANALYSIS/NODE&maxRows=0]]></CSVUrl>
+    <IgnoredInCsv>7:hierId,8:eventId,10:categoryId,11:drillCAT</IgnoredInCsv>
+    <JSONVariables>1:vendor,4:failures,7:hierId,8:eventId,10:categoryId,11:drillCAT</JSONVariables>
+    <RepeatValidation instruction="all">
+    <SqlTest><![CDATA[SELECT SUM(PS_ERR_CNT) AS 'sqlFailures' FROM EVENT_E_RAN_CFA_ERR_RAW where DATETIME_ID >= '2015-08-05 11:00' and DATETIME_ID < '2015-08-05 12:00' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') AND HIER3_ID = {hierId} AND EVENT_ID = {eventId}]]></SqlTest>
+    <Validate>failures = sqlFailures</Validate>
+    </RepeatValidation>
+    <Validate>sort{failures} = desc</Validate>
+    <RepeatDrillDown instruction="all">2</RepeatDrillDown>
+    <PassToDrillDown id="2">failures,hierId,eventId,categoryId,drillCAT</PassToDrillDown>
+</TestCase>
+
+<TestCase id="2">
+    <Precondition>1.failures > 0</Precondition>
+    <Direction> Drill on Failure (Detailed event analysis) </Direction>
+    <Url><![CDATA[NETWORK/WCDMA_NETWORK_CALL_FAILURE_FILTER_ANALYSIS/NODE_BY_FILTER?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&HIER3_ID={1.hierId}&eventID={1.eventId}&type=BSC&dataTieredDelay=true&categoryId={1.categoryId}&drillCat={1.drillCAT}&display=grid&tzOffset=%2B0100&maxRows=500]]></Url>
+    <CSVUrl><![CDATA[EniqEventsCSV.jsp?HIER3_ID={1.hierId}&eventID={1.eventId}&type=BSC&dataTieredDelay=true&categoryId={1.categoryId}&drillCat={1.drillCAT}&display=grid&tzOffset=%2B0100&dataTimeFrom={datetime}&dataTimeTo={datetime]&userName=admin&url=NETWORK/WCDMA_NETWORK_CALL_FAILURE_FILTER_ANALYSIS/NODE_BY_FILTER&maxRows=0]]></CSVUrl>
+    <IgnoredInCsv>17:hierCell,18:vendor,20:ecnoOne,21:ulintOne,22:rscpOne,26:rscpTwo,27:rscpThree,28:rscpFour,29:ecnoTwo,30:ecnoThree,31:ecnoFour,32:ulintTwo,33:ulintThree,34:ulintFour,35:scramblingOne,36:scramblingTwo,37:scramblingThree,38:scramblingFour,39:gbrUL,40:gbrDL,42:dlcBuffer,51:eventId,52:categoryId,53:drillCAT</IgnoredInCsv>
+    <JSONVariables>1:eventTime,2:IMSI,3:TAC,4:terminalMake,5:terminalModel,48:csErr,49:psErr,50:multiErr,51:eventId</JSONVariables>
+    <Validate>1.failures = sum{psErr}</Validate>
+    <RepeatValidation instruction="all">
+    <SqlTest><![CDATA[select isnull(CAST(rawview.imsi as varchar),' ') as 'sqlIMSI' , isnull(CAST(rawview.tac as varchar),' ') as 'sqlTAC', case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') else ' ' end as 'sqlMake',case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Invalid') else ' ' end as 'sqlModel' from(select imsi,TAC from EVENT_E_RAN_CFA_ERR_RAW where imsi = {IMSI} and EVENT_TIME = '{eventTime}' and DATETIME_ID >= '2015-08-05 11:00' and DATETIME_ID < '2015-08-05 12:00' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) as rawview, DIM_E_SGEH_TAC where rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+    <Validate>IMSI = sqlIMSI, TAC = sqlTAC, terminalMake = sqlMake, terminalModel = sqlModel</Validate>
+    </RepeatValidation>
+</TestCase>
+
+</TestSuite>

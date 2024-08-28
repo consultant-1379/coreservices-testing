@@ -1,0 +1,4 @@
+AllTests\Workspace\IMSI\3G_Event_Trace\Call_Failure.xml
+AllTests\Workspace\IMSI_Group\3G_Event_Trace\Call_Failure.xml
+AllTests\Workspace\3G_Radio_Network\3G_Disconnection_Code_Ranking\Call_Drops.xml
+AllTests\Workspace\3G_Radio_Network\3G_Ranking\Call_Drops.xml

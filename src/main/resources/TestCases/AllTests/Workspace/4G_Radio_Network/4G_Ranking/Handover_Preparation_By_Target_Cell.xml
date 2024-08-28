@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TestSuite>
+    <TestCase id="5">
+        <Direction>Launch -> 4G Radio Network -> 4G Ranking -> Handover Preparation By Target Cell</Direction>
+        <Url><![CDATA[NETWORK/LTE_HANDOVER_FAILURE_RANKING_ANALYSIS/TARGETCELL_PREP?time=30&display=grid&tzOffset=%2B0530&maxRows=50]]></Url>
+        <JSONVariables>1:thierId,2:categoryId,3:rank,4:ranVendor,5:controller,6:trgtAccessArea,7:failures,8:ratDesc</JSONVariables>
+        <RepeatValidation instruction="all">
+            <SqlTest><![CDATA[select count (*) as 'sqlFailures' from dc.EVENT_E_LTE_HFA_ERR_RAW where CATEGORY_ID_2 = {categoryId} and THIER321_ID = {thierId} and DATETIME_ID >= '2015-02-09 09:01' and DATETIME_ID < '2015-02-09 09:31' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') group by thier321_id]]></SqlTest>
+            <Validate>failures = sqlFailures</Validate>
+            <Validate>sort{failures} = desc</Validate>
+            <Validate><![CDATA[ rank < 50 ]]></Validate>
+        </RepeatValidation>
+        <Validate>sort{failures} = desc</Validate>
+    </TestCase>
+</TestSuite>

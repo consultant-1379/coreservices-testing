@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<TestCase id="1">
+<Direction>Launch -> Access Area -> Network Event Analysis -> Call Failure(3G) -> Total RAB Failure -> Call Drops</Direction>
+<Url><![CDATA[NETWORK/WCDMA_CFA_NETWORK_EVENT_ANALYSIS/NODE?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&type=CELL&node={-master-RANCFAAccessArea}&eventID={-master-WcdmaCallDropId}&categoryId={-master-CategoryId}&drillCat={-master-DrillCatCallDrops}&display=grid&tzOffset=%2B0100&maxRows=500]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?type=CELL&node={-master-RANCFAAccessArea}&eventID={-master-WcdmaCallDropId}&categoryId={-master-CategoryId}&drillCat={-master-DrillCatCallDrops}&display=grid&tzOffset=%2B0100&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/WCDMA_CFA_NETWORK_EVENT_ANALYSIS/NODE&maxRows=0]]></CSVUrl>
+<IgnoredInCsv>8:hierCellId,9:eventId,11:categoryId,12:drillCAT</IgnoredInCsv>
+<JSONVariables>1:vendor,2:rncNode,3:accessArea,5:failures,7:impactedSubs,8:hierCellId,9:eventId,11:categoryId,12:drillCAT</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select SUM(CS_ERR_CNT+PS_ERR_CNT+MULTI_ERR_CNT) as 'sqlFailures',count(distinct IMSI) as 'sqlImpactedSubs' from event_e_ran_cfa_err_raw where DATETIME_ID >= '2015-08-18 12:00' and DATETIME_ID < '2015-08-18 13:00' and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') AND (CS_RAB_FAIL_CNT > 0 OR PS_RAB_FAIL_CNT > 0 OR MULTI_RAB_FAIL_CNT > 0) AND HIER3_CELL_ID = {hierCellId} AND EVENT_ID = {eventId}]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+</RepeatValidation>
+<Validate>sort{failures} = desc</Validate>
+<RepeatDrillDown instruction="all">2,4</RepeatDrillDown>
+<PassToDrillDown id="2">hierCellId,eventId,drillCAT,categoryId,failures</PassToDrillDown>
+<PassToDrillDown id="3">eventId</PassToDrillDown>
+<PassToDrillDown id="4">hierCellId,eventId,drillCAT,categoryId,failures</PassToDrillDown>
+</TestCase>
+
+<TestCase id="2">
+<Precondition>1.failures > 0</Precondition>
+<Direction> Drill By Failure disconnection code </Direction>
+<Url><![CDATA[NETWORK/WCDMA_NETWORK_CALL_FAILURE_ANALYSIS/PIE_CHART_CELL_BY_DISCONNECTION?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&HIER3_CELL_ID={1.hierCellId}&type=CELL&eventID={1.eventId}&categoryId={1.categoryId}&drillCat={1.drillCAT}&display=chart&tzOffset=%2B0100&maxRows=500]]></Url>
+<JSONVariables>1:disconnectionDesc,2:failures,3:impactedSubscriber,4:disconnectionCodeId,5:disconnectionSubCodeId,6:accessArea,7:filterValue,8:hierCellId,9:filterType,10:categoryId,11:drillCAT</JSONVariables>
+<Validate>1.failures = sum{failures}</Validate>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select case when rawview.EVENT_ID = {1.eventId} then dim.DISCONNECTION_DESC when rawview.RAN_DISCONNECTION_CODE is null or rawview.RAN_DISCONNECTION_SUBCODE is null then '' else isnull(dim.DISCONNECTION_DESC,'Description Unavailable') end DISCONNECTION_DESCRIPTION,dim.DISCONNECTION_DESC as 'sqlDisconnectionDesc', SUM(CS_ERR_CNT+PS_ERR_CNT+MULTI_ERR_CNT)  as 'sqlFails' from EVENT_E_RAN_CFA_ERR_RAW  rawview left join DIM_E_RAN_CFA_DISCONNECTION dim on rawview.RAN_DISCONNECTION_CODE = dim.DISCONNECTION_CODE
+ and rawview.RAN_DISCONNECTION_SUBCODE = dim.DISCONNECTION_SUB_CODE where  (CS_RAB_FAIL_CNT > 0 OR PS_RAB_FAIL_CNT > 0) and rawview.RAN_DISCONNECTION_CODE = {disconnectionCodeId} and rawview.RAN_DISCONNECTION_SUBCODE = {disconnectionSubCodeId} AND HIER3_CELL_ID = {hierCellId} AND DATETIME_ID >= '2015-08-18 13:00' and DATETIME_ID < '2015-08-18 14:00' and EVENT_ID={1.eventId} and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') group by dim.DISCONNECTION_DESC,rawview.RAN_DISCONNECTION_CODE,rawview.RAN_DISCONNECTION_SUBCODE,rawview.EVENT_ID]]></SqlTest>
+<Validate>failures=sqlFails </Validate>
+<Validate>disconnectionDesc=sqlDisconnectionDesc</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">3</RepeatDrillDown>
+<PassToDrillDown id="3">hierCellId,drillCAT,categoryId,failures,1.eventId,filterValue,filterType</PassToDrillDown>
+</TestCase>
+
+<TestCase id="3">
+<Precondition>2.failures > 0</Precondition>
+<Direction> Drill on disconnection code </Direction>
+<Url><![CDATA[NETWORK/WCDMA_NETWORK_CALL_FAILURE_FILTER_ANALYSIS/NODE_BY_FILTER?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&HIER3_CELL_ID={2.hierCellId}&type=CELL&eventID={1.eventId}&categoryId={2.categoryId}&drillCat={2.drillCAT}&display=grid&filterValue={2.filterValue}&filterType={2.filterType}&tzOffset=%2B0100&maxRows=500]]></Url>
+<JSONVariables>1:eventTime,2:IMSI,3:TAC,4:terminalMake,5:terminalModel,6:accessArea,13:vendor,48:csErr,49:psErr,50:multiErr</JSONVariables>
+<Validate>2.failures=sum{csErr}+sum{psErr}+sum{multiErr}</Validate>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select isnull(CAST(rawview.imsi as varchar),' ') as 'sqlIMSI' ,isnull(CAST(rawview.tac as varchar),' ') as 'sqlTAC',
+ case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown')
+ WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') else ' ' end as 'sqlMake' ,
+ case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Unknown')
+ WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Invalid') else ' ' end as 'sqlModel'
+ from(select imsi,TAC from EVENT_E_RAN_CFA_ERR_RAW where imsi = {IMSI}
+ and EVENT_TIME = '{eventTime}' and DATETIME_ID >= '2015-08-18 13:00' and DATETIME_ID < '2015-08-18 14:00'
+ and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) as rawview, DIM_E_SGEH_TAC where rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+<Validate>IMSI=sqlIMSI,terminalMake=sqlMake,terminalModel=sqlModel,TAC=sqlTAC </Validate>
+</RepeatValidation>
+</TestCase>
+
+<TestCase id="4">
+<Precondition>1.failures > 0</Precondition>
+<Direction> Drill on Failures Detailed Event Analysis </Direction>
+<Url><![CDATA[NETWORK/WCDMA_NETWORK_CALL_FAILURE_FILTER_ANALYSIS/NODE_BY_FILTER?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&HIER3_CELL_ID={1.hierCellId}&eventID={1.eventId}&type=CELL&dataTieredDelay=true&categoryId={1.categoryId}&drillCat={1.drillCAT}&display=grid&tzOffset=%2B0100&maxRows=500]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?HIER3_CELL_ID={1.hierCellId}&eventID={1.eventId}&type=CELL&dataTieredDelay=true&categoryId={1.categoryId}&drillCat={1.drillCAT}&display=grid&tzOffset=%2B0100&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/WCDMA_NETWORK_CALL_FAILURE_FILTER_ANALYSIS/NODE_BY_FILTER&maxRows=0]]></CSVUrl>
+<IgnoredInCsv>17:hierCellId,18:vendor,51:eventId,52:categoryId,53:drillCAT</IgnoredInCsv>
+<JSONVariables>1:eventTime,2:IMSI,3:TAC,4:terminalMake,5:terminalModel,6:controller,17:hierCellId,48:csErr,49:psErr,50:multiErr,51:eventId,52:categoryId,53:drillCAT</JSONVariables>
+<Validate>1.failures = sum{csErr}+sum{psErr}+sum{multiErr}</Validate>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select isnull(CAST(rawview.imsi as varchar),' ') as 'sqlIMSI' , isnull(CAST(rawview.tac as varchar),' ') as 'sqlTAC', case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown')
+ WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') else ' ' end as 'sqlMake',case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Unknown')
+ WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Invalid') else ' ' end as 'sqlModel' from(select imsi,TAC from EVENT_E_RAN_CFA_ERR_RAW where imsi = {IMSI} and EVENT_TIME = '{eventTime}' and DATETIME_ID >= '2015-03-19 12:02' and DATETIME_ID < '2015-03-19 12:32' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) as rawview, DIM_E_SGEH_TAC where rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+<Validate>IMSI=sqlIMSI,TAC=sqlTAC,terminalMake=sqlMake,terminalModel=sqlModel</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">5,6</RepeatDrillDown>
+<PassToDrillDown id="5">controller,hierCellId,eventId,categoryId,drillCAT</PassToDrillDown>
+<PassToDrillDown id="6">TAC</PassToDrillDown>
+</TestCase>
+
+<TestCase id="5">
+<Precondition>4.controller != EMPTY</Precondition>
+<Direction> Drill on Controller </Direction>
+<Url><![CDATA[NETWORK/WCDMA_CFA_NETWORK_EVENT_ANALYSIS/NODE?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=%2B0100&maxRows=500&HIER3_ID={4.hierCellId}&type=BSC&eventID={4.eventId}&categoryId={4.categoryId}&drillCat={4.drillCAT}]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=%2B0100&HIER3_ID={4.hierCellId}&type=BSC&eventID={4.eventId}&categoryId={4.categoryId}&drillCat={4.drillCAT}&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/WCDMA_CFA_NETWORK_EVENT_ANALYSIS/NODE&maxRows=0]]></CSVUrl>
+<IgnoredInCsv>7:hierCellId,8:eventId,10:categoryId,11:drillCAT</IgnoredInCsv>
+<JSONVariables>1:vendor,2:controller,4:failures,5:reEstablishFailure,6:impactedSubscriber,7:hierCellId,8:eventId</JSONVariables>
+<Validate>4.controller = controller</Validate>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select SUM(CS_ERR_CNT+PS_ERR_CNT+MULTI_ERR_CNT) AS 'sqlFailures',count(distinct IMSI) as 'sqlImpactedSubscriber' from EVENT_E_RAN_CFA_ERR_RAW where DATETIME_ID >= '2015-08-18 12:00' and DATETIME_ID < '2015-08-18 13:00' and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')
+ AND HIER3_ID = {hierCellId} AND EVENT_ID = {eventId} AND (CS_RAB_FAIL_CNT > 0 OR PS_RAB_FAIL_CNT > 0 OR MULTI_RAB_FAIL_CNT > 0)]]></SqlTest>
+<Validate>failures=sqlFailures</Validate>
+<Validate>impactedSubscriber=sqlImpactedSubscriber</Validate>
+</RepeatValidation>
+</TestCase>
+
+<TestCase id="6">
+<Precondition>4.TAC != EMPTY</Precondition>
+<Direction> Drill on TAC </Direction>
+<Url><![CDATA[TERMINAL/WCDMA/CALL_FAILURE_EVENT_ANALYSIS/TERMINAL/SUMMARY?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=%2B0100&maxRows=500&tac={4.TAC}&type=TAC]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=%2B0100&tac={4.TAC}&type=TAC&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=TERMINAL/WCDMA/CALL_FAILURE_EVENT_ANALYSIS/TERMINAL/SUMMARY&maxRows=0]]></CSVUrl>
+<JSONVariables>1:manufacturer,2:model,4:failures,6:impactedSubscriber,7:eventId,8:TAC</JSONVariables>
+<Validate>4.TAC=TAC</Validate>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count(*) as 'sqlFailures',count(distinct IMSI) as 'sqlImpactedSubscriber' from event_e_ran_cfa_err_raw where DATETIME_ID >= '2015-08-18 12:00' and DATETIME_ID < '2015-08-18 13:00' AND TAC = {TAC} AND EVENT_ID = {eventId}]]></SqlTest>
+<Validate>failures=sqlFailures</Validate>
+<Validate>impactedSubscriber=sqlImpactedSubscriber</Validate>
+<SqlTest><![CDATA[select case when (EVENT_E_RAN_CFA_ERR_RAW.TAC IS NOT NULL AND EVENT_E_RAN_CFA_ERR_RAW.TAC <> 0) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') WHEN (EVENT_E_RAN_CFA_ERR_RAW.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') else ' ' end as 'sqlMake' from EVENT_E_RAN_CFA_ERR_RAW, DIM_E_SGEH_TAC where EVENT_E_RAN_CFA_ERR_RAW.TAC *= DIM_E_SGEH_TAC.TAC and EVENT_E_RAN_CFA_ERR_RAW.TAC = {TAC}]]></SqlTest>
+<SqlTest><![CDATA[select case when (EVENT_E_RAN_CFA_ERR_RAW.TAC IS NOT NULL AND EVENT_E_RAN_CFA_ERR_RAW.TAC <> 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Unknown') WHEN (EVENT_E_RAN_CFA_ERR_RAW.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Invalid') else ' ' end as 'sqlModel' from EVENT_E_RAN_CFA_ERR_RAW, DIM_E_SGEH_TAC where EVENT_E_RAN_CFA_ERR_RAW.TAC *= DIM_E_SGEH_TAC.TAC and EVENT_E_RAN_CFA_ERR_RAW.TAC = {TAC}]]></SqlTest>
+<Validate>manufacturer = sqlMake,model = sqlModel</Validate>
+</RepeatValidation>
+</TestCase>
+
+</TestSuite>

@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<TestCase id="1">
+<Direction>Launch -> APN -> Cause Code Analysis -> Core PS</Direction>
+<Url><![CDATA[NETWORK/CAUSE_CODE_PIE_CHART/CC_LIST?type=APN&node={-master-apn}&time={times}&tzOffset=+0000]]></Url>
+<JSONVariables>1:CC,2:CCDesc,3:CPT,4:CPTDesc</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest instruction="distinctPlus:sgeh"><![CDATA[select distinct(cause_code) as 'sqlCauseCode' from event_e_lte_err_raw where datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') and apn = '{-master-apn}' and cause_code={CC} and cause_prot_type={CPT}]]></SqlTest>
+<Validate>CC = sqlCauseCode</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">2,4</RepeatDrillDown>
+<PassToDrillDown id="4">CC,CPT</PassToDrillDown>
+</TestCase>
+
+
+<!--__________________________________________________________Grid View__________________________________________________________-->
+
+
+<TestCase id="2">
+<MAXROWCOUNT>500</MAXROWCOUNT> <!--- Not limited by url max row's in this window -->
+<Direction>Click on Grid View</Direction>
+<Url><![CDATA[NETWORK/CAUSE_CODE_ANALYSIS?time={times}&type=APN&node={-master-apn}&display=grid&tzOffset=+0000&maxRows=500]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?type=APN&node={-master-apn}&display=grid&tzOffset=+0000&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/CAUSE_CODE_ANALYSIS&maxRows=0]]></CSVUrl>
+<JSONVariables>1:apn,2:CPT,3:CPTDesc,4:CC,5:CCDesc,6:CCRecommandedAction,7:SCC,8:SCCDesc,9:SCCRecommendedAction,10:occurences,11:impactedSubs</JSONVariables>
+<IgnoredInCsv>1:apn,2:CPT</IgnoredInCsv>
+<RepeatValidation instruction="all">
+<SqlTest instruction="plus:sgeh"><![CDATA[select count(*) as 'sqlOccurences' from event_e_lte_err_raw where datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') and apn = '{-master-apn}' and cause_code={CC} and subcause_code={SCC} and cause_prot_type={CPT} and cause_prot_type = (select cause_prot_type from dim_e_lte_cause_prot_type where cause_prot_type_desc = '{CPTDesc}')]]></SqlTest>
+<Validate>sqlOccurences = occurences</Validate>
+<SqlTest instruction="distinctPlus:sgeh"><![CDATA[select count(distinct(imsi)) as 'sqlImpacted' from event_e_lte_err_raw where datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') and apn = '{-master-apn}' and cause_code={CC} and subcause_code={SCC} and cause_prot_type={CPT} and cause_prot_type = (select cause_prot_type from dim_e_lte_cause_prot_type where cause_prot_type_desc = '{CPTDesc}')]]></SqlTest>
+<Validate>impactedSubs = sqlImpacted</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">3</RepeatDrillDown>
+<PassToDrillDown id="3">occurences,apn,CC,SCC,CPT</PassToDrillDown>
+</TestCase>
+
+<TestCase id="3">
+<Direction>Drill on Sub Cause Code</Direction>
+<Url><![CDATA[NETWORK/CAUSE_CODE_ANALYSIS?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&type=APN&node={-master-apn}&display=grid&tzOffset=+0000&maxRows=500&type=APN&key=ERR&causeCode={2.CC}&subCauseCode={2.SCC}&causeProtType={2.CPT}]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?node={-master-apn}&display=grid&tzOffset=%2B0000&type=APN&key=ERR&causeCode={2.CC}&subCauseCode={2.SCC}&causeProtType={2.CPT}&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/CAUSE_CODE_ANALYSIS&maxRows=0]]></CSVUrl>
+<JSONVariables>1:eventTime,2:imsi,3:tac,4:terminalMake,5:terminalModel,6:eventIdDesc,7:eventResDesc,8:causeProtDesc,9:causeCodeId,10:causeCodeDesc,12:subcauseCodeId,13:subcauseCodeDesc,15:sgsnMme,16:ratDesc,17:controller,19:accessArea,20:vendor,31:apn,48:eventResId,49:causeProtId,50:ratId</JSONVariables>
+<IgnoredInCsv>46:causeCode,47:subCauseCode,48:eventResult,49:causeProtocolTypeId</IgnoredInCsv>
+<RepeatValidation instruction="all">
+<SqlTest instruction="Use:ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {imsi} and tac = {tac} and event_time = '{eventTime}' and cause_prot_type={causeProtId} and cause_code = {causeCodeId} and subcause_code = {subcauseCodeId} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>ratId = sqlRatID,vendor = sqlVendor</Validate>
+<Validate>2.apn = apn,2.CC = causeCodeId, 2.SCC = subcauseCodeId, 2.CPT = causeProtId</Validate>
+</RepeatValidation>
+<Validate>2.occurences = count{eventTime}</Validate>
+<Validate>sort{eventTime} = desc</Validate>
+</TestCase>
+
+
+<!--__________________________________________________________Chart View__________________________________________________________-->
+
+
+<TestCase id="4">
+<Direction>Click on Chart View</Direction>
+<Url><![CDATA[NETWORK/CAUSE_CODE_PIE_CHART/CAUSE_CODE_ANALYSIS?time={times}&type=APN&node={-master-apn}&display=chart&tzOffset=+0000&maxRows=500&causeCodeIds={1.CC}_{1.CPT}]]></Url>
+<JSONVariables>1:CC,2:CCDesc,3:CPT,4:failures,5:impactedSubs</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest instruction="plus:sgeh"><![CDATA[select count(*) as 'sqlFailures' from event_e_lte_err_raw where datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') and apn = '{-master-apn}' and cause_code={CC} and cause_prot_type={1.CPT}]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+<SqlTest instruction="distinctPlus:sgeh"><![CDATA[select count(distinct(imsi)) as 'sqlImpacted' from event_e_lte_err_raw where datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') and apn = '{-master-apn}' and cause_code={CC} and cause_prot_type={1.CPT}]]></SqlTest>
+<Validate>impactedSubs = sqlImpacted</Validate>
+<Validate>1.CC = CC</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">5</RepeatDrillDown>
+<PassToDrillDown id="5">CC,1.CPT</PassToDrillDown>
+</TestCase>
+
+<TestCase id="5">
+<Direction>Drill on Cause Code Pie Chart</Direction>
+<Url><![CDATA[NETWORK/CAUSE_CODE_PIE_CHART/SUB_CAUSE_CODE_ANALYSIS?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&type=APN&node={-master-apn}&display=chart&causeCode={4.CC}&CPT={1.CPT}&tzOffset=+0000&maxRows=500]]></Url>
+<JSONVariables>1:CPT,2:CC,3:SCC,4:SCCDesc,5:SCCHelp,6:failures,7:impactedSubs</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest instruction="plus:sgeh"><![CDATA[select count(*) as 'sqlFailures' from event_e_lte_err_raw where datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') and apn = '{-master-apn}' and cause_code={4.CC} and cause_prot_type={CPT} and subcause_code={SCC}]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+<SqlTest instruction="distinctPlus:sgeh"><![CDATA[select count(distinct(imsi)) as 'sqlImpacted' from event_e_lte_err_raw where datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') and apn = '{-master-apn}' and cause_code={4.CC} and cause_prot_type={CPT} and subcause_code={SCC}]]></SqlTest>
+<Validate>impactedSubs = sqlImpacted</Validate>
+<Validate>4.CC = CC,1.CPT = CPT</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">6</RepeatDrillDown>
+<PassToDrillDown id="6">CC,SCC,CPT,failures</PassToDrillDown>
+</TestCase>
+
+<TestCase id="6">
+<Direction>Drill on Sub Cause Code Pie Chart</Direction>
+<Url><![CDATA[NETWORK/CAUSE_CODE_ANALYSIS?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&type=APN&node={-master-apn}&display=grid&causeProtType={5.CPT}&causeCode={5.CC}&subCauseCode={5.SCC}&key=ERR&tzOffset=+0000&maxRows=500]]></Url>
+<!--CSVUrl><![CDATA[EniqEventsCSV.jsp?type=APN&node={-master-apn}&display=grid&causeProtType={5.CPT}&causeCode={5.CC}&subCauseCode={5.SCC}&key=ERR&tzOffset=+0000&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/CAUSE_CODE_ANALYSIS&maxRows=0]]></CSVUrl-->
+<JSONVariables>1:eventTime,2:imsi,3:tac,4:terminalMake,5:terminalModel,6:eventIdDesc,7:eventResDesc,8:causeProtDesc,9:causeCodeId,10:causeCodeDesc,12:subcauseCodeId,13:subcauseCodeDesc,15:sgsnMme,16:ratDesc,17:controller,19:accessArea,20:vendor,31:apn,48:eventResId,49:causeProtId,50:ratId</JSONVariables>
+<!--IgnoredInCsv>46:causeCode,47:subCauseCode,48:eventResult,49:causeProtocolTypeId</IgnoredInCsv-->
+<RepeatValidation instruction="all">
+<SqlTest instruction="Use:ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {imsi} and tac = {tac} and event_time = '{eventTime}' and cause_prot_type={causeProtId} and cause_code = {causeCodeId} and subcause_code = {subcauseCodeId} and vendor = '{vendor}' and hierarchy_1='{accessArea}' and hierarchy_3='{controller}' and rat={ratId} and apn='{-master-apn}'and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>5.CC = causeCodeId, 5.SCC = subcauseCodeId, 5.CPT = causeProtId</Validate>
+</RepeatValidation>
+<Validate>5.failures = count{eventTime}</Validate>
+<Validate>sort{eventTime} = desc</Validate>
+</TestCase>
+
+</TestSuite>

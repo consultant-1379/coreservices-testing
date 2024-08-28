@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<TestCase id="1">
+   <Direction>Launch -> Tracking Area -> Cause Code Analysis -> Call Failure(4G)</Direction>
+   <Url><![CDATA[NETWORK/LTE_CFA_CAUSE_CODE_ANALYSIS/PIE_CHART_CC_LIST?type=TRAC&node={-master-LTECFATrackingAreaNode}&time={time}&tzOffset=%2B0530]]></Url>
+   <JSONVariables>1:causeId,2:causeCodeDesc</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest ><![CDATA[select count(events.CAUSE_CODE) as 'sqlCount' from(select EVENT_ID,CAUSE_CODE from( select EVENT_ID,CAUSE_CODE from dc.EVENT_E_LTE_CFA_ERR_RAW where TRAC = {-master-LTECFATrackingAreaNode} and DATETIME_ID >= '2015-02-11 13:12' and DATETIME_ID < '2015-02-11 14:12' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and CAUSE_CODE is not null) as err group by CAUSE_CODE,EVENT_ID) as events]]></SqlTest>
+   <Validate> count{causeId}=sqlCount</Validate>
+   </RepeatValidation>
+   <RepeatDrillDown instruction="all">2,4</RepeatDrillDown>
+   <PassToDrillDown id="4">causeId</PassToDrillDown>
+</TestCase>
+
+<!-- ____________________________________________________Grid View__________________________________________________________________________ -->
+
+<TestCase id="2">
+   <Direction>Click on Grid View</Direction>
+   <Url><![CDATA[NETWORK/LTE_CFA_CAUSE_CODE_ANALYSIS/CAUSE_CODE_ANALYSIS?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&type=TRAC&node={-master-LTECFATrackingAreaNode}&display=grid&tzOffset=%2B0530&maxRows=500]]></Url>
+   <CSVUrl><![CDATA[EniqEventsCSV.jsp?type=TRAC&node={-master-LTECFATrackingAreaNode}&display=grid&tzOffset=%2B0530&dataTimeFrom={time}&dataTimeTo={time}&userName=admin&url=NETWORK/LTE_CFA_CAUSE_CODE_ANALYSIS/CAUSE_CODE_ANALYSIS&maxRows=0]]></CSVUrl>
+   <IgnoredInCsv>1:jsonSysColTrac,2:jsonSysColEventId,4:jsonSysColCauseCode</IgnoredInCsv>
+   <JSONVariables>1:jsonSysColTrac,2:jsonSysColEventId,3:jsonEventType,4:jsonSysColCauseCode,5:jsonCauseCodeDescription,6:jsonFailures,7:jsonImpactedSubscribers</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[select count(*) as 'sqlFailures', count(distinct IMSI) as 'sqlImpactedSubs' from EVENT_E_LTE_CFA_ERR_RAW where DATETIME_ID >= '2015-03-02 05:00' and DATETIME_ID < '2015-03-03 05:00' and event_id = {jsonSysColEventId} and CAUSE_CODE={jsonSysColCauseCode} and TRAC={jsonSysColTrac} and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+   <Validate>jsonFailures = sqlFailures</Validate>
+   <Validate>jsonImpactedSubscribers=sqlImpactedSubs</Validate>
+   </RepeatValidation>
+   <Validate>sort{jsonFailures} = desc</Validate>
+   <RepeatDrillDown instruction="all">3</RepeatDrillDown>
+   <PassToDrillDown id="3">jsonSysColTrac,jsonFailures,jsonSysColEventId,jsonSysColCauseCode</PassToDrillDown>
+</TestCase>
+
+<TestCase id="3">
+   <PreCondition>2.jsonFailures > 0 </PreCondition>
+   <Direction>Drill On Occurrences</Direction><!-- csv export validation for detailed window will be cover under jiraNO:EQEV-26708 -->
+   <Url><![CDATA[NETWORK/LTE_CALL_FAILURE_DETAILED_EVENT_ANALYSIS/CAUSE_CODE_TRACKING_AREA?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=%2B0000&maxRows=500&TRAC={2.jsonSysColTrac}&eventID={2.jsonSysColEventId}&causeCode={2.jsonSysColCauseCode}]]></Url>
+   <JSONVariables>1:hierThreeId,2:hierId,3:eventTime,4:jsonTime,5:IMSI,6:TAC,7:terminalMake,8:terminalModel,9:eventId</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[select isnull(CAST(rawview.imsi as varchar),' ')  as 'sqlIMSI' ,rawview.hier3_id as 'sqlhierThreeId', isnull(CAST(rawview.tac as varchar),' ') as 'sqlTAC',case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') else ' ' end as 'sqlMake' , case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Invalid') else ' ' end as 'sqlModel' from(select imsi,hier3_id, TAC from EVENT_E_LTE_CFA_ERR_RAW where TRAC = {2.jsonSysColTrac} and hier321_id={hierId} and IMSI={IMSI} and EVENT_ID = {2.jsonSysColEventId} and CAUSE_CODE={2.jsonSysColCauseCode}  and EVENT_TIME = '{eventTime}' and DATETIME_ID >= '2015-03-19 12:02' and DATETIME_ID < '2015-03-19 12:32' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) as rawview, DIM_E_SGEH_TAC where rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+   <Validate>IMSI = sqlIMSI, hierThreeId = sqlhierThreeId, TAC=sqlTAC, terminalMake=sqlMake, terminalModel=sqlModel</Validate>
+   </RepeatValidation>
+   <Validate>2.jsonFailures=count{eventTime}</Validate>
+</TestCase>
+
+<!-- ____________________________________________________Chart View__________________________________________________________________________ -->
+
+<TestCase id="4">
+   <Direction>Click on Chart View</Direction>
+   <Url><![CDATA[NETWORK/LTE_CFA_CAUSE_CODE_ANALYSIS/PIE_CHART_CAUSE_CODE_ANALYSIS?time={time}&type=TRAC&node={-master-LTECFATrackingAreaNode}&display=chart&tzOffset=%2B0530&maxRows=500&causeCodeIds={1.causeId}]]></Url>
+   <JSONVariables>1:CCId,3:failures,4:impactedSubs,5:eventId,7:trackingArea</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[select count(*) as 'sqlFailures', count(distinct IMSI) as 'sqlImpactedSubs' from EVENT_E_LTE_CFA_ERR_RAW where DATETIME_ID >= '2015-03-02 05:00' and DATETIME_ID < '2015-03-03 05:00' and  event_id = {eventId} and CAUSE_CODE={CCId} and TRAC={trackingArea} and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+   <Validate>failures = sqlFailures</Validate>
+   <Validate>impactedSubs = sqlImpactedSubs</Validate>
+   </RepeatValidation>
+   <RepeatDrillDown instruction="all">5</RepeatDrillDown>
+   <PassToDrillDown id="5">trackingArea,CCId,eventId,failures</PassToDrillDown>
+</TestCase>
+
+<TestCase id="5">
+   <Direction>Drill on Chart</Direction>
+   <Url><![CDATA[NETWORK/LTE_CFA_CAUSE_CODE_ANALYSIS/PIE_CHART_CAUSE_CODE_ANALYSIS_DRILLDOWN?time={time}&type=TRAC&node={4.trackingArea}&display=grid&causeCode={4.CCId}&eventID={4.eventId}&tzOffset=%2B0530&maxRows=500]]></Url>
+   <JSONVariables>1:hierThreeId,2:hierId,3:eventTime,5:IMSI,6:TAC,7:terminalMake,8:terminalModel,9:eventId</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[select isnull(CAST(rawview.imsi as varchar),' ')  as 'sqlIMSI' ,rawview.hier3_id as 'sqlhierThreeId', isnull(CAST(rawview.tac as varchar),' ') as 'sqlTAC',case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') else ' ' end as 'sqlMake' , case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Invalid') else ' ' end as 'sqlModel' from(select imsi,hier3_id, TAC from EVENT_E_LTE_CFA_ERR_RAW where TRAC = {4.trackingArea} and hier321_id={hierId} and IMSI={IMSI} and EVENT_ID = {eventId} and CAUSE_CODE={4.CCId}  and EVENT_TIME = '{eventTime}' and DATETIME_ID >= '2015-03-19 12:02' and DATETIME_ID < '2015-03-19 12:32' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) as rawview, DIM_E_SGEH_TAC where rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+   <Validate>IMSI = sqlIMSI, hierThreeId = sqlhierThreeId, TAC=sqlTAC, terminalMake=sqlMake, terminalModel=sqlModel</Validate>
+   </RepeatValidation>
+   <Validate>4.failures = count{eventTime}</Validate> 
+</TestCase>
+
+
+</TestSuite>

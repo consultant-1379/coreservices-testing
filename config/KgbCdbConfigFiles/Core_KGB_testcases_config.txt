@@ -1,0 +1,6 @@
+AllTests\Workspace\Core_PS_Network\Core_Ranking\AccessArea.xml
+AllTests\Workspace\Core_PS_Network\Core_Ranking\APN.xml
+AllTests\Workspace\Core_PS_Network\Core_Ranking\BSC.xml
+AllTests\Workspace\Core_PS_Network\Core_Ranking\eNodeB.xml
+AllTests\Workspace\Core_PS_Network\Core_Ranking\RNC.xml
+AllTests\Workspace\Core_PS_Network\Core_Ranking\Subscriber.xml

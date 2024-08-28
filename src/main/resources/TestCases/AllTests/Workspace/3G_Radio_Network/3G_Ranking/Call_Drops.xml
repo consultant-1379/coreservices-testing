@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<TestCase id="1">
+<MaxRowCount>500</MaxRowCount>
+<Direction> Launch -> 3G Radio Network -> 3G Ranking -> Call Drops </Direction>
+<Url><![CDATA[SUBSCRIBER/CALL_FAILURE_RANKING_ANALYSIS/SUBSCRIBER/CALL_DROP?dateFrom=13022015&dateTo=13022015&timeFrom=1515&timeTo=1530&display=grid&tzOffset=%2B0000]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=%2B0100&dataTimeFrom=1431486000000&dataTimeTo=1431489600000&userName=admin&url=SUBSCRIBER/CALL_FAILURE_RANKING_ANALYSIS/SUBSCRIBER/CALL_DROP&maxRows=0]]></CSVUrl>
+<JSONVariables>1:rank,2:imsi,3:failures,4:reestablishmentFailures</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count(*) as 'sqlFailures' from EVENT_E_RAN_CFA_ERR_RAW where DATETIME_ID >= '2015-02-13 15:15' and DATETIME_ID < '2015-02-13 15:30' and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and event_id = {-master-WcdmaCallDropId} and imsi = {imsi}]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+<Validate><![CDATA[ rank < 50 ]]></Validate>
+</RepeatValidation>
+<Validate>sort{failures} = desc</Validate>
+<RepeatDrillDown instruction="ALL">2</RepeatDrillDown>
+<PassToDrillDown id="2">imsi,failures</PassToDrillDown>
+</TestCase>
+
+<TestCase id="2">
+<Precondition>1.failures > 0</Precondition>
+<Direction> Drill on IMSI </Direction>
+<Url><![CDATA[NETWORK/CALL_FAILURE_DETAILED_EVENT_ANALYSIS/SUBSCRIBER/CALL_DROP?dateFrom=20042015&dateTo=20042015&timeFrom=0045&timeTo=1245&display=grid&tzOffset=%2B0530&maxRows=500&IMSI={1.imsi}]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=%2B0100&IMSI={1.imsi}&dataTimeFrom=1431486000000&dataTimeTo=1431489600000&userName=admin&url=NETWORK/CALL_FAILURE_DETAILED_EVENT_ANALYSIS/SUBSCRIBER/CALL_DROP&maxRows=0]]></CSVUrl>
+<IgnoredInCsv>2:imsi</IgnoredInCsv>
+<JSONVariables>1:eventTime,2:imsi,3:TAC,4:terminalMake,5:terminalModel</JSONVariables>
+<Validate>1.failures = count{eventTime}</Validate>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select isnull(CAST(rawview.imsi as varchar),'') as 'sqlIMSI' , isnull(CAST(rawview.tac as varchar),'') as 'sqlTAC', case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown')
+WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') else '' end as 'sqlMake' , case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Unknown')
+WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Invalid') else '' end as 'sqlModel' from(select imsi,TAC from EVENT_E_RAN_CFA_ERR_RAW where imsi = {imsi} and EVENT_TIME = '{eventTime}' and DATETIME_ID >= '2015-03-19 12:02' and DATETIME_ID < '2015-03-19 12:32' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) as rawview, DIM_E_SGEH_TAC where rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+<Validate>imsi=sqlIMSI,TAC=sqlTAC,terminalMake=sqlMake,terminalModel=sqlModel</Validate>
+</RepeatValidation>
+</TestCase>
+</TestSuite>

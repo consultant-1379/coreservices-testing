@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+<TestCase id="1">
+<Direction>Launch -> 3G Radio Network -> 3G Terminal Group Analysis -> Call Failure (Call Setup Failure)</Direction>
+<Url><![CDATA[TERMINAL/CALL_FAILURE_TERMINAL_GROUP_ANALYSIS/MOST_CALL_SETUP_FAILURES?time={time}&display=chart&tzOffset=%2B0100]]></Url>
+<JSONVariables>1:rank,2:group,3:failures,4:subscribers,5:reEstablishmentFailures</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count(*) as 'sqlFailures' from event_e_ran_cfa_err_raw where DATETIME_ID >= '2015-05-13 03:00' and DATETIME_ID < '2015-05-13 04:00' and event_id = {-master-WcdmaCallSetupFailureId} and tac in (select tac from GROUP_TYPE_E_TAC where GROUP_NAME = '{group}')]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+<SqlTest><![CDATA[select case when(cast(count(*) as varchar(10)) = '0') then '' else cast(count(*) as varchar) end as 'sqlreEstablishmentFailures' from event_e_ran_cfa_err_raw where DATETIME_ID >= '2015-05-13 03:00' and DATETIME_ID < '2015-05-13 04:00' and PROCEDURE_INDICATOR = {-master-WcdmaProcedureIndicator} and event_id = {-master-WcdmaCallSetupFailureId} and tac in (select tac from GROUP_TYPE_E_TAC where GROUP_NAME = '{group}')]]></SqlTest>
+<Validate>reEstablishmentFailures = sqlreEstablishmentFailures</Validate>
+<Validate><![CDATA[ rank < 50 ]]></Validate>
+</RepeatValidation>
+<Validate>sort{failures} = desc</Validate>
+<RepeatDrillDown instruction="ALL">2</RepeatDrillDown>
+<PassToDrillDown id="2">group,failures</PassToDrillDown>
+</TestCase>
+
+<TestCase id="2">
+<Precondition>1.failures > 0</Precondition>
+<Direction> Drill on Group </Direction>
+<Url><![CDATA[TERMINAL/CALL_FAILURE_TERMINAL_GROUP_ANALYSIS/MOST_CALL_SETUP_FAILURES?time={time}&groupname={1.group}&display=grid&tzOffset=%2B0100]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?groupname={1.group}&display=grid&tzOffset=%2B0100&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=TERMINAL/CALL_FAILURE_TERMINAL_GROUP_ANALYSIS/MOST_CALL_SETUP_FAILURES&maxRows=0]]></CSVUrl>
+<JSONVariables>1:TAC,2:terminalMake,3:terminalModel,4:subFailures,5:reEstablishment</JSONVariables>
+<Validate>1.failures = sum{subFailures}</Validate>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count(*) as 'sqlSubFailures' from event_e_ran_cfa_err_raw where DATETIME_ID >= '2015-05-13 03:00' and DATETIME_ID < '2015-05-13 04:00' and event_id = {-master-WcdmaCallSetupFailureId} and tac = {TAC}]]></SqlTest>
+<SqlTest><![CDATA[select raw.tac as 'sqlTAC', dim.Manufacturer AS 'sqlMake', dim.MARKETING_NAME AS 'sqlModel' from EVENT_E_RAN_CFA_ERR_RAW raw, DIM_E_SGEH_TAC dim where raw.tac = dim.tac and raw.tac =  {TAC}]]></SqlTest>
+<Validate>TAC=sqlTAC, terminalMake=sqlMake, terminalModel=sqlModel</Validate>
+</RepeatValidation>
+</TestCase>
+</TestSuite>

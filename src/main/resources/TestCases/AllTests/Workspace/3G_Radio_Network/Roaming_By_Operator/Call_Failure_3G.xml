@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+<TestCase id="1">
+<Direction>Launch -> 3G Radio Network -> Roaming By Operator -> Call Failure by 3G</Direction>
+<Url><![CDATA[NETWORK/WCDMA/CALL_FAILURE_ROAMING_ANALYSIS/OPERATOR?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=chart&tzOffset=%2B0100&maxRows=25]]></Url>
+<JSONVariables>1:operator,2:failures,3:noOfRoamers,4:country,5:MCC,6:MNC</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count(*) as 'sqlFailures', count(distinct IMSI) as 'sqlImpactedRoamers' from EVENT_E_RAN_CFA_ERR_RAW where DATETIME_ID >= '2015-08-27 10:00' and DATETIME_ID < '2015-08-27 11:00' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and ROAMING = 1  and imsi_MCC ='{MCC}' and imsi_MNC ='{MNC}']]></SqlTest>
+<Validate>failures=sqlFailures</Validate>
+<Validate>noOfRoamers=sqlImpactedRoamers</Validate>
+<SqlTest><![CDATA[select COUNTRY as 'sqlCountryName' from DIM_E_SGEH_MCCMNC  where MCC ='{MCC}']]></SqlTest>
+<Validate>country=sqlCountryName</Validate>
+<SqlTest><![CDATA[select OPERATOR as 'sqlOperator' from DIM_E_SGEH_MCCMNC  where MCC ='{MCC}' and MNC='{MNC}']]></SqlTest>
+<Validate>operator=sqlOperator</Validate>
+<SqlTest><![CDATA[select isnull(IMSI_MCC,' ') as 'sqlMCC',isnull(IMSI_MNC,' ') as 'sqlMNC' from EVENT_E_RAN_CFA_ERR_RAW   where  imsi_MCC ='{MCC}' and imsi_MNC ='{MNC}'  and DATETIME_ID >= '2015-09-02 11:30' and DATETIME_ID < '2015-09-02 12:30'  and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') ]]></SqlTest>
+<Validate>MCC=sqlMCC</Validate>
+<Validate>MNC=sqlMNC</Validate>
+</RepeatValidation>
+<Validate>sort{failures} = desc</Validate>
+<RepeatDrillDown instruction="all">2</RepeatDrillDown>
+<PassToDrillDown id="2">MCC,MNC,failures</PassToDrillDown>
+</TestCase>
+
+<TestCase id="2">
+<Precondition>1.failures > 0</Precondition>
+<Direction>Drill on Event Failures</Direction>
+<Url><![CDATA[NETWORK/WCDMA/CALL_FAILURE_ROAMING_ANALYSIS/OPERATOR/DRILL?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=chart&MCC={1.MCC}&MNC={1.MNC}&tzOffset=%2B0100&maxRows=500]]></Url>
+<JSONVariables>2:eventID,3:failures,4:reEstablishmentFailures,5:impactedSubscriber,7:MCC,8:MNC</JSONVariables>
+<Validate>1.failures=sum{failures}</Validate>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count(*) as 'sqlFailures', count(distinct IMSI) as 'sqlImpactedSubscriber' from EVENT_E_RAN_CFA_ERR_RAW where DATETIME_ID >= '2015-08-27 10:00' and DATETIME_ID < '2015-08-27 11:00' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and ROAMING = 1  and imsi_MCC ='{MCC}' and imsi_MNC ='{MNC}' and  EVENT_ID={eventID}]]></SqlTest>
+<Validate>failures=sqlFailures</Validate>
+<Validate>impactedSubscriber=sqlImpactedSubscriber</Validate>
+<SqlTest><![CDATA[select isnull(IMSI_MCC,' ') as 'sqlMCC',isnull(IMSI_MNC,' ') as 'sqlMNC' from EVENT_E_RAN_CFA_ERR_RAW   where  imsi_MCC ='{MCC}' and imsi_MNC ='{MNC}'  and DATETIME_ID >= '2015-09-02 11:30' and DATETIME_ID < '2015-09-02 12:30'  and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') ]]></SqlTest>
+<Validate>MCC=sqlMCC</Validate>
+<Validate>MNC=sqlMNC</Validate>
+<SqlTest><![CDATA[select case when(cast(count(*) as varchar) != '0') then cast(count(*) as varchar) else '' end as 'sqlReEstablishFailures' from EVENT_E_RAN_CFA_ERR_RAW where DATETIME_ID >= '2015-09-02 10:00' and DATETIME_ID < '2015-09-04 02:00'  and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and ROAMING = 1 and IMSI_MCC = '{MCC}'and IMSI_MNC = '{MNC}' and event_id = {eventID} and procedure_indicator = 18]]></SqlTest>
+<Validate>reEstablishmentFailures=sqlReEstablishFailures</Validate>
+</RepeatValidation>
+<Validate>sort{failures} = desc</Validate>
+</TestCase>
+
+</TestSuite>

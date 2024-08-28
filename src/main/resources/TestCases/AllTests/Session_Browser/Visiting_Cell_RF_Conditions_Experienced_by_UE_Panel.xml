@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<TestCase id="1">
+<Direction>Launch -> 3G Session Browser -> Summary Window -> Visiting Cell RF conditions experienced by UE Panel</Direction>
+<Url><![CDATA[SESSION_BROWSER/SESSION_SUMMARY/VISITED_CELLS?time={time}&tzOffset=%2B0100&imsi={-master-SESSIONBROWERIMSI}]]></Url>
+<!-- JSONs values for this window are not represented in numeric formats. Here, columns are represented with column name instead. -->
+<JSONVariables>cId:cId,cellId:cellId,controller:controllerId,durationInCell:duration,samplesBadCoverageBadSignal:bcbs,samplesBadCoverageGoodSignal:bcgs,samplesGoodCoverageBadSignal:gcbs,samplesGoodCoverageGoodSignal:gcgs,startTime:startTime</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select  SUM(RRC_SAMPLES_GC_BS) AS 'sqlGCBS', SUM(RRC_SAMPLES_BC_BS) AS 'sqlBCBS', SUM(RRC_SAMPLES_BC_GS) AS 'sqlBCGS', SUM(RRC_SAMPLES_GC_GS) AS 'sqlGCGS' from EVENT_E_RAN_SESSION_CELL_VISITED_RAW where DATETIME_ID >= '2015-09-02 00:00' and DATETIME_ID < '2015-09-09 00:00' and IMSI = {-master-SESSIONBROWERIMSI} and HIER3_CELL_ID_1 = (select hier3_cell_id from DIM_E_SGEH_HIER321_CELL where CELL_ID = '{cellId}')]]></SqlTest>
+<Validate>bcbs = sqlBCBS, bcgs = sqlBCGS, gcbs = sqlGCBS, gcgs = sqlGCGS</Validate>
+</RepeatValidation>
+</TestCase>
+
+</TestSuite>

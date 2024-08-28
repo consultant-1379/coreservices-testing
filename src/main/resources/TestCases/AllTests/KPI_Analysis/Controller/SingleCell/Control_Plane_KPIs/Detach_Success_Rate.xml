@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<TestCase id="1">
+   <Direction>Launch -> Controller -> Single Cell -> Detach Success Rate -> Map</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/CORE/KPI_MAP?node={-master-DetachSuccessRateAccessAreaNode}&type=CELL&dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&tzOffset=+0100]]></Url>
+   <JSONVariables>rncName:controller,vendor:vendor,kpis.Detach Success Rate:detachSR,cellName:cellId</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(5,2)) AS 'sqlDetachSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' AND rat = 1 AND EVENT_ID = 14 AND HIERARCHY_3 = '{controller}' AND HIERARCHY_1 IN (SELECT HIERARCHY_1 FROM DIM_E_SGEH_HIER321_CELL WHERE CELL_ID = '{cellId}') AND VENDOR='{vendor}' AND
+   ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(sum(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_SGEH_VEND_HIER321_EVENTID_SUC_15MIN WHERE DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' AND rat = 1 AND EVENT_ID = 14 AND HIERARCHY_3 = '{controller}' AND HIERARCHY_1 IN (SELECT HIERARCHY_1 FROM DIM_E_SGEH_HIER321_CELL WHERE CELL_ID = '{cellId}') AND VENDOR='{vendor}' ) AS suc]]></SqlTest>
+   <Validate>detachSR = sqlDetachSR</Validate>
+   </RepeatValidation>
+   <RepeatDrillDown instruction="all">2</RepeatDrillDown>
+   <PassToDrillDown id="2">controller,vendor,cellId</PassToDrillDown>
+</TestCase>
+
+<TestCase id="2">
+   <Direction>Chart</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/CORE/KPI_CHART?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&tzOffset=+0100&node={-master-DetachSuccessRateAccessAreaNode}&type=CELL]]></Url>
+   <JSONVariables>kpiTime:kpiTimeInMilliseconds,kpiTime:kpiTime,Detach Success Rate:detachSR</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(5,2)) AS 'sqlDetachSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {kpiTime} AND HIERARCHY_3 = '{1.controller}' AND HIERARCHY_1 IN (SELECT HIERARCHY_1 FROM DIM_E_SGEH_HIER321_CELL WHERE CELL_ID = '{1.cellId}') AND VENDOR='{1.vendor}' AND rat = 1 AND EVENT_ID = 14 AND
+   ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(sum(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_SGEH_VEND_HIER321_EVENTID_SUC_15MIN WHERE {kpiTime} AND HIERARCHY_3 = '{1.controller}' AND HIERARCHY_1 IN (SELECT HIERARCHY_1 FROM DIM_E_SGEH_HIER321_CELL WHERE CELL_ID = '{1.cellId}') AND VENDOR='{1.vendor}' AND rat = 1 AND EVENT_ID = 14 ) AS suc]]></SqlTest>
+   <Validate>detachSR = sqlDetachSR</Validate>
+   </RepeatValidation>
+   <RepeatDrillDown instruction="all">3,4,5</RepeatDrillDown>
+   <PassToDrillDown id="3">kpiTimeInMilliseconds,kpiTime,detachSR,1.controller,1.vendor,1.cellId</PassToDrillDown>
+   <PassToDrillDown id="4">kpiTimeInMilliseconds,kpiTime,detachSR,1.controller,1.vendor,1.cellId</PassToDrillDown>
+   <PassToDrillDown id="5">kpiTimeInMilliseconds,kpiTime,detachSR,1.controller,1.vendor,1.cellId</PassToDrillDown>
+   <Validate>sort{kpiTimeInMilliseconds} = asc</Validate>
+</TestCase>
+
+<TestCase id="3">
+   <PreCondition><![CDATA[2.detachSR > 0]]></PreCondition>
+   <Direction>Chart By Options -> TAC</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/CORE/KPI_CHART/KPI_DRILL?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&kpiStartTime={2.kpiTimeInMilliseconds}&tzOffset=+0100&node={-master-DetachSuccessRateAccessAreaNode}&type=CELL&drilltype=TAC&kpiId=5]]></Url>
+   <JSONVariables>Value:detachSR,DrillBy:tac</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest success_raw="false"><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(5,2)) AS 'sqlDetachSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {2.kpiTime} AND HIERARCHY_3 = '{1.controller}' AND HIERARCHY_1 IN (SELECT HIERARCHY_1 FROM DIM_E_SGEH_HIER321_CELL WHERE CELL_ID = '{1.cellId}') AND VENDOR='{1.vendor}' AND rat = 1 AND TAC = {tac} AND EVENT_ID = 14 AND
+   ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(sum(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_SGEH_IMSI_SUC_RAW WHERE {2.kpiTime} AND TAC = {tac} AND HIER321_ID in (Select distinct HIER321_ID from DIM_E_SGEH_HIER321 where HIERARCHY_3 = '{1.controller}' AND HIERARCHY_1 IN (SELECT HIERARCHY_1 FROM DIM_E_SGEH_HIER321_CELL WHERE CELL_ID = '{1.cellId}') AND VENDOR='{1.vendor}' AND rat = 1) AND TAC = {tac} AND EVENT_ID = 14 AND ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) AS suc]]></SqlTest>
+   <SqlTest success_raw="true"><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(5,2)) AS 'sqlDetachSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {2.kpiTime} AND HIERARCHY_3 = '{1.controller}' AND HIERARCHY_1 IN (SELECT HIERARCHY_1 FROM DIM_E_SGEH_HIER321_CELL WHERE CELL_ID = '{1.cellId}') AND VENDOR='{1.vendor}' AND rat = 1 AND TAC = {tac} AND EVENT_ID = 14 AND
+   ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT count(*) AS SUC_COUNT FROM EVENT_E_SGEH_SUC_RAW WHERE {2.kpiTime} AND TAC = {tac} AND HIERARCHY_3 = '{1.controller}' AND HIERARCHY_1 IN (SELECT HIERARCHY_1 FROM DIM_E_SGEH_HIER321_CELL WHERE CELL_ID = '{1.cellId}') AND VENDOR='{1.vendor}' AND rat = 1 AND TAC = {tac} AND EVENT_ID = 14 AND ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) AS suc]]></SqlTest>
+   <Validate>detachSR = sqlDetachSR</Validate>
+   </RepeatValidation>
+</TestCase>
+
+<TestCase id="4">
+   <PreCondition><![CDATA[2.detachSR > 0]]></PreCondition>
+   <Direction>Chart By Options -> Make</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/CORE/KPI_CHART/KPI_DRILL?time={time}&kpiStartTime={2.kpiTimeInMilliseconds}&tzOffset=+0000&node={-master-DetachSuccessRateAccessAreaNode}&type=CELL&drilltype=MANUFACTURER&kpiId=5]]></Url>
+   <JSONVariables>Value:detachSR,DrillBy:manufacturer</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest success_raw="false"><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(5,2)) AS 'sqlDetachSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {2.kpiTime} AND HIERARCHY_3 = '{1.controller}' AND HIERARCHY_1 IN (SELECT HIERARCHY_1 FROM DIM_E_SGEH_HIER321_CELL WHERE CELL_ID = '{1.cellId}') AND VENDOR='{1.vendor}' AND rat = 1 AND TAC in (select TAC from DIM_E_SGEH_TAC where MANUFACTURER='{manufacturer}') AND EVENT_ID = 14 AND  ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err,
+   (SELECT ISNULL(sum(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_SGEH_IMSI_SUC_RAW WHERE {2.kpiTime} AND HIER321_ID in (Select distinct HIER321_ID from DIM_E_SGEH_HIER321 where HIERARCHY_3 = '{1.controller}' AND HIERARCHY_1 IN (SELECT HIERARCHY_1 FROM DIM_E_SGEH_HIER321_CELL WHERE CELL_ID = '{1.cellId}') AND VENDOR='{1.vendor}' AND rat = 1) AND TAC in (select TAC from DIM_E_SGEH_TAC where MANUFACTURER='{manufacturer}') AND EVENT_ID = 14 AND ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) AS suc]]></SqlTest>
+   <SqlTest success_raw="true"><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(5,2)) AS 'sqlDetachSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {2.kpiTime} AND HIERARCHY_3 = '{1.controller}' AND HIERARCHY_1 IN (SELECT HIERARCHY_1 FROM DIM_E_SGEH_HIER321_CELL WHERE CELL_ID = '{1.cellId}') AND VENDOR='{1.vendor}' AND rat = 1 AND TAC in (select TAC from DIM_E_SGEH_TAC where MANUFACTURER='{manufacturer}') AND EVENT_ID = 14 AND  ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err,
+   (SELECT count(*) AS SUC_COUNT FROM EVENT_E_SGEH_SUC_RAW WHERE {2.kpiTime} AND HIERARCHY_3 = '{1.controller}' AND HIERARCHY_1 IN (SELECT HIERARCHY_1 FROM DIM_E_SGEH_HIER321_CELL WHERE CELL_ID = '{1.cellId}') AND VENDOR='{1.vendor}' AND rat = 1 AND TAC in (select TAC from DIM_E_SGEH_TAC where MANUFACTURER='{manufacturer}') AND EVENT_ID = 14 AND ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) AS suc]]></SqlTest>
+   <Validate>detachSR = sqlDetachSR</Validate>
+   </RepeatValidation>
+</TestCase>
+
+<TestCase id="5">
+   <PreCondition><![CDATA[2.detachSR > 0]]></PreCondition>
+   <Direction>Chart By Options -> Make-Model</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/CORE/KPI_CHART/KPI_DRILL?time={time}&kpiStartTime={2.kpiTimeInMilliseconds}&tzOffset=+0000&node={-master-DetachSuccessRateAccessAreaNode}&type=CELL&drilltype=MAKE_MODEL&kpiId=5]]></Url>
+   <JSONVariables>Value:detachSR,DrillBy:manufacturerModel</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest success_raw="false"><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(5,2)) AS 'sqlDetachSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {2.kpiTime} AND HIERARCHY_3 = '{1.controller}' AND HIERARCHY_1 IN (SELECT HIERARCHY_1 FROM DIM_E_SGEH_HIER321_CELL WHERE CELL_ID = '{1.cellId}') AND VENDOR='{1.vendor}' AND rat = 1 AND TAC in (select tac from (select tac, manufacturer || '-' || model as ManuModel from dim_e_sgeh_tac where ManuModel='{manufacturerModel}') AS temp1) AND EVENT_ID = 14 AND
+   ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(sum(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_SGEH_IMSI_SUC_RAW WHERE {2.kpiTime} AND HIER321_ID in (Select distinct HIER321_ID from DIM_E_SGEH_HIER321 where HIERARCHY_3 = '{1.controller}' AND HIERARCHY_1 IN (SELECT HIERARCHY_1 FROM DIM_E_SGEH_HIER321_CELL WHERE CELL_ID = '{1.cellId}') AND VENDOR='{1.vendor}' AND rat = 1) AND TAC in (select tac from (select tac, manufacturer || '-' || model as ManuModel from dim_e_sgeh_tac where ManuModel='{manufacturerModel}')AS temp2) AND EVENT_ID = 14 AND ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) AS suc]]></SqlTest>
+   <SqlTest success_raw="true"><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(5,2)) AS 'sqlDetachSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {2.kpiTime} AND HIERARCHY_3 = '{1.controller}' AND HIERARCHY_1 IN (SELECT HIERARCHY_1 FROM DIM_E_SGEH_HIER321_CELL WHERE CELL_ID = '{1.cellId}') AND VENDOR='{1.vendor}' AND rat = 1 AND TAC in (select tac from (select tac, manufacturer || '-' || model as ManuModel from dim_e_sgeh_tac where ManuModel='{manufacturerModel}') AS temp1) AND EVENT_ID = 14 AND
+   ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT count(*) AS SUC_COUNT FROM EVENT_E_SGEH_SUC_RAW WHERE {2.kpiTime} AND HIERARCHY_3 = '{1.controller}' AND HIERARCHY_1 IN (SELECT HIERARCHY_1 FROM DIM_E_SGEH_HIER321_CELL WHERE CELL_ID = '{1.cellId}') AND VENDOR='{1.vendor}' AND rat = 1 AND TAC in (select tac from (select tac, manufacturer || '-' || model as ManuModel from dim_e_sgeh_tac where ManuModel='{manufacturerModel}')AS temp2) AND EVENT_ID = 14 AND ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) AS suc]]></SqlTest>
+   <Validate>detachSR = sqlDetachSR</Validate>
+   </RepeatValidation>
+</TestCase>
+
+</TestSuite>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+<TestCase id="1">
+   <Direction>Launch -> Tracking Area Group -> Network Event Analysis -> Call Failure(4G)</Direction>
+   <Url><![CDATA[NETWORK/LTE_CALL_FAILURE_EVENT_SUMMARY/NODE?time={time}&type=TRAC&groupname={-master-LTECFATrackingAreaGroup}&display=grid&tzOffset=%2B0530&maxRows=500]]></Url>
+   <CSVUrl><![CDATA[EniqEventsCSV.jsp?type=TRAC&groupname={-master-LTECFATrackingAreaGroup}&display=grid&tzOffset=%2B0530&dataTimeFrom={time}&dataTimeTo={time}&userName=admin&url=NETWORK/LTE_CALL_FAILURE_EVENT_SUMMARY/NODE&maxRows=0]]></CSVUrl>
+   <IgnoredInCsv>1:groupName,2:jsonCategoryId</IgnoredInCsv>
+   <JSONVariables>1:groupName,2:jsonCategoryId,3:jsonCategory,4:jsonFailures,5:impactedSubs</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[select count(*) as 'sqlFailures', count(distinct IMSI) as 'sqlImpactedSubs' from EVENT_E_LTE_CFA_ERR_RAW, dc.GROUP_TYPE_E_LTE_TRAC group_table where DATETIME_ID >= '2015-03-02 05:00' and DATETIME_ID < '2015-03-03 05:00' and EVENT_E_LTE_CFA_ERR_RAW.TRAC = group_table.TRAC and group_table.GROUP_NAME = '{groupName}'  and category_id = {jsonCategoryId} and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+   <Validate>jsonFailures=sqlFailures</Validate>
+   <Validate>impactedSubs=sqlImpactedSubs</Validate>
+   </RepeatValidation>
+   <Validate>sort{jsonFailures} = desc</Validate>
+   <RepeatDrillDown instruction="all">2</RepeatDrillDown>
+   <PassToDrillDown id="2">jsonCategoryId,jsonFailures,groupName</PassToDrillDown>
+</TestCase>
+
+<TestCase id="2">
+   <Direction>Drill on Failure Category</Direction>
+   <Url><![CDATA[NETWORK/LTE_CALL_FAILURE_EVENT_SUMMARY/CATEGORISED_TRAC?time={time}&display=grid&tzOffset=%2B0530&maxRows=500&groupname={1.groupName}&CATEGORY_ID={1.jsonCategoryId}]]></Url>
+   <CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=%2B0530&groupname={1.groupName}&CATEGORY_ID={1.jsonCategoryId}&dataTimeFrom={time}&dataTimeTo={time}&userName=admin&url=NETWORK/LTE_CALL_FAILURE_EVENT_SUMMARY/CATEGORISED_TRAC&maxRows=0]]></CSVUrl>
+   <IgnoredInCsv>1:groupName,3:jsonEventId</IgnoredInCsv>
+   <JSONVariables>1:groupName,2:jsonEventType,3:jsonEventId,4:jsonFailures,5:impactedSubs</JSONVariables>
+   <Validate>1.jsonFailures = sum{jsonFailures}</Validate>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[select count(*) as 'sqlFailures', count(distinct IMSI) as 'sqlImpactedSubs' from EVENT_E_LTE_CFA_ERR_RAW, dc.GROUP_TYPE_E_LTE_TRAC group_table where DATETIME_ID >= '2015-03-02 05:00' and DATETIME_ID < '2015-03-03 05:00' and EVENT_E_LTE_CFA_ERR_RAW.TRAC = group_table.TRAC and group_table.GROUP_NAME = '{groupName}'  and event_id = {jsonEventId} and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+   <Validate>jsonFailures=sqlFailures</Validate>
+   <Validate>impactedSubs=sqlImpactedSubs</Validate>
+   </RepeatValidation>
+   <Validate>sort{jsonFailures} = desc</Validate>
+   <RepeatDrillDown instruction="all">3</RepeatDrillDown>
+   <PassToDrillDown id="3">jsonFailures,jsonEventId,groupName</PassToDrillDown>
+</TestCase>
+
+<TestCase id="3">
+   <PreCondition>2.jsonFailures > 0</PreCondition>
+   <Direction>Drill on Failures</Direction><!-- csv export validation for detailed window will be cover under jiraNO:EQEV-26708 -->
+   <Url><![CDATA[NETWORK/LTE_CALL_FAILURE_DETAILED_EVENT_ANALYSIS/TRAC?time={time}&display=grid&tzOffset=%2B0530&maxRows=500&groupname={2.groupName}&eventID={2.jsonEventId}]]></Url>
+   <JSONVariables>1:jsonHierIdThree,2:jsonHierIdTwo,3:eventTime,4:jsonEventTime,5:jsonImsi,6:jsonTac,7:jsonTerminalMake,8:jsonTerminalModel,9:jsonEventId</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[select isnull(CAST(rawview.imsi as varchar),' ')  as 'sqlIMSI' ,rawview.hier3_id as 'sqlhierThreeId', isnull(CAST(rawview.tac as varchar),' ') as 'sqlTAC',case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') else ' ' end as 'sqlMake' , case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Invalid') else ' ' end as 'sqlModel'  from(select imsi,hier3_id, TAC from EVENT_E_LTE_CFA_ERR_RAW, dc.GROUP_TYPE_E_LTE_TRAC group_table where EVENT_E_LTE_CFA_ERR_RAW.TRAC = group_table.TRAC and group_table.GROUP_NAME = '{2.groupName}' and hier321_id={jsonHierIdTwo} and EVENT_ID = {jsonEventId} and EVENT_TIME = '{eventTime}'  and IMSI={jsonImsi} and DATETIME_ID >= '2015-03-19 12:02' and DATETIME_ID < '2015-03-19 12:32' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) as rawview, DIM_E_SGEH_TAC where rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+   <Validate>jsonImsi = sqlIMSI, jsonHierIdThree = sqlhierThreeId, jsonTac=sqlTAC, jsonTerminalMake=sqlMake, jsonTerminalModel=sqlModel</Validate>
+   </RepeatValidation>
+   <Validate>2.jsonFailures = count{eventTime}</Validate>
+</TestCase>
+
+</TestSuite>

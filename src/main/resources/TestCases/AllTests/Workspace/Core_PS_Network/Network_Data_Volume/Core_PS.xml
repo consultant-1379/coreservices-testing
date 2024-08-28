@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+    <TestCase id="1">
+        <Direction>Launch -> Core PS Network -> Network Data Volume -> Core PS </Direction>
+        <Url><![CDATA[NETWORK/NETWORK_DATAVOL_ANALYSIS?dateFrom=22122014&dateTo=29122014&timeFrom=0000&timeTo=0000&display=grid&tzOffset=%2B0530&maxRows=500]]></Url>
+        <CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=%2B0530&dataTimeFrom=1419186600000&dataTimeTo=1419791400000&userName=admin&url=NETWORK/NETWORK_DATAVOL_ANALYSIS&maxRows=0]]></CSVUrl>
+        <JSONVariables>1:TS,2:downlinkMB,3:uplinkMB,4:downlinkThroughPut,5:uplinkThroughPut,6:noOfSubscriber,7:noOfSessions</JSONVariables>
+    </TestCase>
+</TestSuite>

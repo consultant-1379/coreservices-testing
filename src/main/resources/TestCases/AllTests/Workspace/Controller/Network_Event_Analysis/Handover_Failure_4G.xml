@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+<TestCase id="1">
+<Direction>Launch -> Controller -> Network Event Analysis -> HandOver Failure (4G)</Direction>
+<Url><![CDATA[NETWORK/LTE_HANDOVER_FAILURE_SUBSCRIBER_EVENT_SUMMARY_ANALYSIS/NODE?time={time}&type=BSC&node={-master-LTEHFAControllerNode}&display=grid&tzOffset=+0530&maxRows=500]]></Url>
+<JSONVariables>1:hierId,5:categoryId,6:failures,7:impactedSubscribers</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest ><![CDATA[select count (*) as 'sqlFailues',count (distinct rawview.IMSI)as 'sqlImpacted'from(select CATEGORY_ID_2,  IMSI from EVENT_E_LTE_HFA_ERR_RAW where HIER3_ID = {hierId} and CATEGORY_ID_2 ={categoryId} and DATETIME_ID >= '2015-02-12 08:59' and DATETIME_ID < '2015-02-12 09:29' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) as rawview]]></SqlTest>
+<Validate>failures=sqlFailues</Validate>
+<Validate>impactedSubscribers=sqlImpacted</Validate>
+</RepeatValidation>
+<Validate>sort{failures} = desc</Validate>
+<RepeatDrillDown instruction="all">2</RepeatDrillDown>
+<PassToDrillDown id="2">categoryId,hierId</PassToDrillDown>
+</TestCase>
+
+<TestCase id="2">
+<Direction>Drill on Preparation/Execution</Direction>
+<Url><![CDATA[NETWORK/LTE_HANDOVER_FAILURE_SUBSCRIBER_EVENT_SUMMARY_ANALYSIS/CATEGORY_ID_ENODEB?time={time}&display=grid&tzOffset=+0530&maxRows=500&HIER3_ID={1.hierId}&categoryId={1.categoryId}]]></Url>
+<JSONVariables>1:hierId,5:eventId,6:categoryId,6:failures,7:impactedSubscribers</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest ><![CDATA[ select count (*) as 'sqlCounts',count (distinct rawview.IMSI) as 'sqlImpacted' from(select EVENT_ID,IMSI from EVENT_E_LTE_HFA_ERR_RAW where HIER3_ID = {hierId} and EVENT_ID ={eventId} and CATEGORY_ID_2 = {1.categoryId} and DATETIME_ID >= '2015-02-12 09:54' and DATETIME_ID < '2015-02-12 10:24'and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) as rawview]]></SqlTest>
+<Validate>failures=sqlCounts</Validate>
+<Validate>impactedSubscribers=sqlImpacted</Validate>
+</RepeatValidation>
+<Validate>sort{failures} = desc</Validate>
+ <RepeatDrillDown instruction="all">3</RepeatDrillDown>
+<PassToDrillDown id="3">hierId,eventId,failures</PassToDrillDown>
+</TestCase>
+
+<TestCase id="3">
+<Precondition>2.failures > 0</Precondition>
+<Direction>Drill on Failures</Direction>
+<Url><![CDATA[NETWORK/LTE_HANDOVER_FAILURE_SUBSCRIBER_DETAILED_EVENT_ANALYSIS/ENODEB?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=+0530&maxRows=500&HIER3_ID={2.hierId}&eventID={2.eventId}]]></Url>
+<JSONVariables>1:hierId,5:eventTime,7:IMSI,8:TAC,9:MAnufacturer,10:MOdel</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select rawview.event_id as 'sqlEventid',isnull(CAST(rawview.imsi as varchar),' ') as 'sqlIMSI',rawview.tac as 'sqlTac', case WHEN (rawview.TAC != NULL AND rawview.TAC != 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') ELSE ' ' END AS 'sqlMake', case when (rawview.TAC != NULL AND  rawview.TAC != 0 ) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME,'Model Unknown') when (rawview.TAC = 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME,'Model Invalid') else ' ' end AS 'sqlModel' from (select event_id ,imsi,tac from dc.EVENT_E_LTE_HFA_ERR_RAW as rawview where event_time = '{eventTime}' and rawview.EVENT_ID = {2.eventId} and rawview.HIER3_ID = {2.hierId} and rawview.EVENT_ID = {2.eventId} and imsi={IMSI} and DATETIME_ID >= '2015-02-11 12:24' and DATETIME_ID < '2015-02-11 13:24'and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) AS rawview, DIM_E_SGEH_TAC WHERE rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+<Validate>IMSI = sqlIMSI, 2.eventId = sqlEventid,MAnufacturer = sqlMake,MOdel = sqlModel,TAC = sqlTac </Validate>
+</RepeatValidation>
+</TestCase>
+<Validate>2.failures = count{eventTime}</Validate>
+</TestSuite>

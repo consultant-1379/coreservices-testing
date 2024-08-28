@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<TestCase id="1">
+    <MaxValidation>5</MaxValidation>
+    <Direction>Launch -> Core(PS) Network -> Core Ranking -> Subscriber</Direction>
+    <Url><![CDATA[NETWORK/RANKING_ANALYSIS_IMSI?time=15&display=grid&tzOffset=+0100&maxRows=50]]></Url>
+    <CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&dataTimeFrom=1415279700000&dataTimeTo=1415281500000&userName=admin&url=NETWORK/RANKING_ANALYSIS_IMSI&maxRows=0]]></CSVUrl>
+    <JSONVariables>1:rank,2:imsi,3:failures,4:successes</JSONVariables>
+    <RepeatValidation instruction="random10">
+        <SqlTest><![CDATA[select rank as 'sqlRank', no_of_errors as 'sqlFailures' from (select rank() over (order by no_of_errors Desc) as rank, no_of_errors, imsi from (select count(*) as no_of_errors, imsi from (select imsi from event_e_lte_err_raw where datetime_id >= '2015-03-19 07:00' and datetime_id < '2014-03-09 21:32' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') and imsi <> 0 union all select imsi from event_e_sgeh_err_raw where datetime_id >= '2015-03-19 08:00' and datetime_id < '2014-03-09 21:32' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') and imsi <> 0) rawCount group by imsi) unionCount) rankView where imsi = {imsi}]]></SqlTest>
+        <Validate>failures = sqlFailures</Validate>
+        <Validate>rank = sqlRank</Validate>
+        <Validate><![CDATA[rank <= 50 ]]></Validate>
+        <SqlTest success_raw="false" instruction="plus:lte"><![CDATA[select sum(no_of_successes) as 'sqlSuccesses' from EVENT_E_SGEH_imsi_suc_raw where IMSI={imsi} and DATETIME_ID >= '2014-05-29 13:15' and DATETIME_ID < '2014-05-29 13:30' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+        <SqlTest success_raw="true" instruction="plus:lte"><![CDATA[select count(*) as 'sqlSuccesses' from EVENT_E_SGEH_suc_raw where IMSI={imsi} and DATETIME_ID >= '2014-05-29 13:15' and DATETIME_ID < '2014-05-29 13:30' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+        <Validate>successes = sqlSuccesses</Validate>    
+    </RepeatValidation>
+    <Validate>sort{rank} = asc</Validate>
+    <Validate>sort{failures} = desc</Validate>
+    <RepeatDrillDown instruction="random3">2</RepeatDrillDown>
+    <PassToDrillDown id="2">imsi,failures,successes</PassToDrillDown>
+</TestCase>
+
+
+<TestCase id="2">
+    <PreCondition>1.failures > 1</PreCondition>
+    <Direction>Drill on IMSI</Direction>
+    <Url><![CDATA[SUBSCRIBER/EVENT_ANALYSIS?time=15&type=IMSI&imsi={1.imsi}&dataTieredDelay=true&display=grid&key=TOTAL&tzOffset=+0100&maxRows=500]]></Url>
+    <CSVUrl><![CDATA[EniqEventsCSV.jsp?type=IMSI&imsi={1.imsi}&dataTieredDelay=true&display=grid&key=TOTAL&tzOffset=+0000&dataTimeFrom=1415279700000&dataTimeTo=1415281500000&userName=admin&url=SUBSCRIBER/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+    <JSONVariables>1:eventTime,2:ptmsi,3:tac,4:terminalMake,5:terminalModel,6:eventIdDesc,7:eventResDesc,8:causeProtDesc,9:causeCodeId,10:causeCodeDesc,11:subCauseCodeId,12:subCauseCodeDesc,13:sgsnMme,14:ratDesc,15:controller,17:accessArea,18:vendor,56:apn,73:eventResId,74:causeProtId,75:ratId</JSONVariables>
+    <IgnoredInCsv>71:causeCode,72:subcauseCode,73:eventResId,74:causeProtId</IgnoredInCsv>
+    <RepeatValidation instruction="all">
+        <SqlTest instruction="Use:ratId,eventResId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where event_time = '{eventTime}' and cause_code = {causeCodeId} and subcause_code = {subCauseCodeId} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac = {tac} and imsi = {1.imsi} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+        <Validate>tac = sqlTac,sgsnMme = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,vendor = sqlVendor</Validate>   
+    </RepeatValidation>
+        <Validate>1.failures = count{eventTime}</Validate>
+    <RepeatDrillDown instruction="all">3,5,7,9,11</RepeatDrillDown>
+    <PassToDrillDown id="3">tac</PassToDrillDown>
+    <PassToDrillDown id="5">sgsnMme</PassToDrillDown>
+    <PassToDrillDown id="7">vendor,ratId,controller</PassToDrillDown>
+    <PassToDrillDown id="9">vendor,ratId,controller,accessArea</PassToDrillDown>
+    <PassToDrillDown id="11">apn</PassToDrillDown>
+</TestCase>
+
+
+<!--__________________________________________________________TAC Drill Downs__________________________________________________________-->
+
+
+<TestCase id="3">
+    <Direction>Drill on TAC</Direction>
+    <Url><![CDATA[SUBSCRIBER/EVENT_ANALYSIS?dateFrom=10062014&dateTo=17062014&timeFrom=0530&timeTo=0530&display=grid&tzOffset=+0530&maxRows=500&key=SUM&type=TAC&tac={2.tac}]]></Url>
+    <CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&key=SUM&type=TAC&tac={2.tac}&dataTimeFrom=1415279700000&dataTimeTo=1415281500000&userName=admin&url=SUBSCRIBER/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+    <JSONVariables>1:manufacturer,2:model,3:tac,4:eventId,5:eventType,6:failure,7:success,8:totalEvents,9:successRatio,10:impactedSubscriber</JSONVariables>
+    <IgnoredInCsv>4:eventId</IgnoredInCsv>
+    <RepeatValidation instruction="all">
+        <SqlTest instruction="Use:eventId"><![CDATA[select count(*) as 'sqlFailures' from EVENT_E_LTE_ERR_RAW where DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac ={2.tac} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') and event_id = {eventId}]]></SqlTest>
+        <Validate>failure = sqlFailures</Validate> 
+
+        <SqlTest success_raw="false" instruction="Use:eventId"><![CDATA[select sum(NO_OF_SUCCESSES) as 'sqlsuccess' from EVENT_E_SGEH_Imsi_suc_raw where DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac ={2.tac} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') and event_id = {eventId}]]></SqlTest>
+        <SqlTest success_raw="true" instruction="Use:eventId"><![CDATA[select count(*) as 'sqlsuccess' from EVENT_E_SGEH_suc_raw where DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac ={2.tac} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') and event_id = {eventId}]]></SqlTest>
+        <Validate>success = sqlsuccess</Validate>
+
+        <SqlTest instruction="Use:eventId"><![CDATA[select count(distinct(imsi)) as 'sqlImpacted' from EVENT_E_SGEH_ERR_RAW where DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac ={2.tac} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') and event_id = {eventId}]]></SqlTest>
+        <Validate>impactedSubscriber = sqlImpacted</Validate>
+
+        <Validate>success + failure = totalEvents</Validate>
+        <Validate>( success / totalEvents ) * 100 = successRatio</Validate>     
+    </RepeatValidation>   
+    <RepeatDrillDown instruction="random3">4</RepeatDrillDown>
+    <PassToDrillDown id="4">failure,tac,eventId</PassToDrillDown>
+</TestCase>
+
+<TestCase id="4">
+    <PreCondition>3.failure > 0</PreCondition>
+    <Direction>Drill on Failures from TAC Event Analysis</Direction>
+    <Url><![CDATA[SUBSCRIBER/EVENT_ANALYSIS?dateFrom=16062014&dateTo=23062014&timeFrom=0530&timeTo=0530&display=grid&tzOffset=+0530&maxRows=500&key=ERR&type=TAC&tac={3.tac}&eventID={3.eventId}]]></Url>
+    <CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&key=ERR&type=TAC&tac={3.tac}&eventID={3.eventId}&dataTimeFrom=1415279700000&dataTimeTo=1415281500000&userName=admin&url=SUBSCRIBER/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+    <JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventType,8:eventResult,10:causeCodeId,12:subCauseCodeId,13:subCauseCode,14:SGSNMME,16:controller,18:accessArea,19:vendor,57:apn,75:causeProtId,76:ratId</JSONVariables>
+    <IgnoredInCsv>72:causeCode,73:subcauseCode,74:eventResId,75:causeProtId</IgnoredInCsv>
+
+    <RepeatValidation instruction="all">
+       <SqlTest instruction="Use:ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {imsi} and event_time = '{eventTime}' and cause_code = {causeCodeId} and subcause_code = {subCauseCodeId} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac = {tac} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+        <Validate>tac = sqlTac,SGSNMME = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,3.eventId = sqlEventID,accessArea = sqlHierarchyOne,vendor = sqlVendor</Validate>
+    </RepeatValidation>
+    <Validate>3.failure = count{eventTime}</Validate>
+</TestCase>  
+
+
+<!--__________________________________________________________SGSN-MME Drill Downs__________________________________________________________-->
+
+
+<TestCase id="5">
+    <Direction>Drill on SGSN-MME</Direction>
+    <Url><![CDATA[SUBSCRIBER/EVENT_ANALYSIS?time=30&display=grid&tzOffset=+0000&maxRows=500&key=SUM&type=SGSN&sgsn={2.sgsnMme}]]></Url>
+    <CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&key=SUM&type=SGSN&sgsn={2.sgsnMme}&dataTimeFrom=1415284200000&dataTimeTo=1415286000000&userName=admin&url=SUBSCRIBER/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+    <JSONVariables>1:sgsnMme,2:eventId,3:eventIdDesc,4:failures,5:successes,6:totalEvents,7:successRatio,8:impactedSubs</JSONVariables>
+    <IgnoredInCsv>2:eventId</IgnoredInCsv>
+    <RepeatValidation instruction="all">
+        <SqlTest instruction="use:eventId"><![CDATA[select count(*) as 'sqlFailures' from event_e_lte_err_raw where event_source_name = '{sgsnMme}' and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') and event_id = {eventId}]]></SqlTest>
+        <Validate>failures = sqlFailures</Validate>
+
+        <SqlTest success_raw="false" instruction="use:eventId"><![CDATA[select sum(no_of_successes) as 'sqlSuccess' from EVENT_E_LTE_Imsi_suc_raw where event_source_name = '{sgsnMme}' and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and event_id = {eventId} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+        <SqlTest success_raw="true" instruction="use:eventId"><![CDATA[select count(*) as 'sqlSuccess' from EVENT_E_LTE_suc_raw where event_source_name = '{sgsnMme}' and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and event_id = {eventId} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+        <Validate>successes = sqlSuccess</Validate>
+
+        <SqlTest instruction="use:eventId"><![CDATA[select count(distinct(imsi)) as 'sqlImpacted' from event_e_lte_err_raw where event_source_name = '{sgsnMme}' and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and event_id = {eventId} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+        <Validate>impactedSubs = sqlImpacted</Validate>
+
+        <Validate>successes + failures = totalEvents</Validate>
+        <Validate>( successes / totalEvents ) * 100 = successRatio</Validate>
+    </RepeatValidation>
+        <SqlTest instruction="plus:sgeh"><![CDATA[select count(*) as 'sqlTotalFails' from event_e_lte_err_raw where DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') and event_source_name = '{2.sgsnMme}']]></SqlTest>
+        <Validate>sqlTotalFails = sum{failures}</Validate>
+    <RepeatDrillDown instruction="all">6</RepeatDrillDown>
+    <PassToDrillDown id="6">sgsnMme,eventId,failures</PassToDrillDown>
+</TestCase>
+
+<TestCase id="6">
+    <PreCondition>5.failures > 0</PreCondition>
+    <Direction>Drill on Failures from SGSN-MME Failed Event Analysis</Direction>
+    <Url><![CDATA[SUBSCRIBER/EVENT_ANALYSIS?time=30&display=grid&tzOffset=+0100&maxRows=500&key=ERR&type=SGSN&dataTieredDelay=true&sgsn={5.sgsnMme}&eventID={5.eventId}]]></Url>
+    <CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&key=ERR&type=SGSN&sgsn={5.sgsnMme}&eventID={5.eventId}&dataTimeFrom=1415284200000&dataTimeTo=1415286000000&userName=admin&url=SUBSCRIBER/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+    <JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventIdDesc,8:eventResDesc,9:causeProtDesc,10:causeCodeID,11:causeCodeDesc,12:subCauseCodeID,13:subCauseCodeDesc,14:SGSNMME,15:ratDesc,16:controller,18:accessArea,19:vendor,57:apn,74:eventResId,75:causeProtId,76:ratId</JSONVariables>
+    <IgnoredInCsv>72:causeCode,73:subcauseCode,74:eventResId,75:causeProtId</IgnoredInCsv>
+    <RepeatValidation instruction="random10"> 
+        <SqlTest instruction="Use:ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {imsi} and tac = {tac} and event_time = '{eventTime}' and cause_code = {causeCodeID} and subcause_code = {subCauseCodeID} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+        <Validate>tac = sqlTac,SGSNMME = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,5.eventId = sqlEventID,vendor = sqlVendor</Validate>
+    </RepeatValidation>
+        <Validate>5.failures = count{eventTime}</Validate>
+</TestCase>
+
+
+<!--__________________________________________________________Controller Drill Downs__________________________________________________________-->
+
+
+<TestCase id="7">                                  
+    <Direction>Drill on Controller</Direction>
+    <Url><![CDATA[SUBSCRIBER/EVENT_ANALYSIS?dateFrom=02072014&dateTo=02072014&timeFrom=1200&timeTo=1230&display=grid&tzOffset=+0530&maxRows=500&key=SUM&type=BSC&vendor={2.vendor}&bsc={2.controller}&RAT={2.ratId}]]></Url>
+    <CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&key=SUM&type=BSC&bsc={2.controller}&vendor={2.vendor}&RAT={2.ratId}&dataTimeFrom=1415284200000&dataTimeTo=1415286000000&userName=admin&url=SUBSCRIBER/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+    <JSONVariables>1:ratId,2:vendor,3:controller,4:eventId,5:eventType,6:failures,7:successes,8:totalEvents,9:successRatio,10:impactedSubs</JSONVariables>
+    <IgnoredInCsv>4:eventId</IgnoredInCsv>
+    <RepeatValidation instruction="all">
+        <SqlTest instruction="use:ratId"><![CDATA[select count(*) as 'sqlFailures' from EVENT_E_LTE_ERR_RAW where DATETIME_ID >= '2014-07-02 06:30' and DATETIME_ID < '2014-07-02 07:00' and RAT = {2.ratId} and VENDOR = '{2.vendor}' and HIERARCHY_3 = '{2.controller}' and event_id={eventId} and tac not in (select TAC from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+        <Validate>failures = sqlFailures</Validate>
+        <SqlTest instruction="use:ratId"><![CDATA[select sum(no_of_successes) as 'sqlSuccess' from EVENT_E_LTE_VEND_HIER3_EVENTID_SUC_15MIN where DATETIME_ID >= '2014-07-02 06:30' and DATETIME_ID < '2014-07-02 07:00' and RAT = {2.ratId} and VENDOR = '{2.vendor}' and HIERARCHY_3 = '{2.controller}' and event_id={eventId}]]></SqlTest>
+        <Validate>successes = sqlSuccess</Validate>
+        <SqlTest instruction="use:ratId"><![CDATA[select count(distinct(imsi)) as 'sqlImpacted' from EVENT_E_LTE_ERR_RAW where DATETIME_ID >= '2014-07-02 06:30' and DATETIME_ID < '2014-07-02 07:00' and RAT = {2.ratId} and VENDOR = '{2.vendor}' and HIERARCHY_3 = '{2.controller}' and event_id={eventId} and tac not in (select TAC from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+        <Validate>impactedSubs = sqlImpacted</Validate>
+        <Validate>sqlFailures + sqlSuccess = totalEvents</Validate>
+        <Validate>( sqlSuccess / totalEvents ) * 100 = successRatio</Validate>
+    </RepeatValidation>
+    <RepeatDrillDown instruction="all">8,13</RepeatDrillDown>
+    <PassToDrillDown id="8">ratId,eventId,failures,controller,vendor</PassToDrillDown>
+    <PassToDrillDown id="13">ratId,eventId,successRatio,controller,vendor</PassToDrillDown>
+</TestCase>
+
+<TestCase id="8">
+    <PreCondition>7.failures > 0</PreCondition>
+    <Direction>Drill on Failures from Controller Failed Event Analysis</Direction>
+    <Url><![CDATA[SUBSCRIBER/EVENT_ANALYSIS?dateFrom=31102014&dateTo=31102014&timeFrom=1230&timeTo=1300&display=grid&tzOffset=+0000&maxRows=500&key=ERR&type=BSC&RAT={7.ratId}&bsc={7.controller}&vendor={7.vendor}&eventID={7.eventId}]]></Url>
+    <CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&key=ERR&type=BSC&RAT={7.ratId}&bsc={7.controller}&vendor={7.vendor}&eventID={7.eventId}&dataTimeFrom=1415284200000&dataTimeTo=1415286000000&userName=admin&url=SUBSCRIBER/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+    <JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventIdDesc,8:eventResDesc,9:causeProtDesc,10:causeCodeId,11:causeCodeDesc,12:subcauseCodeId,13:subcauseCodeDesc,14:sgsnMme,15:ratDesc,16:controller,18:accessArea,19:vendor,57:apn,74:eventResId,75:causeProtId,76:ratId</JSONVariables>
+    <IgnoredInCsv>72:causeCode,73:subcauseCode,74:eventResId,75:causeProtId</IgnoredInCsv>
+    <RepeatValidation instruction="random10"> 
+        <SqlTest instruction="Use:ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {imsi} and tac = {tac} and event_time = '{eventTime}' and cause_code = {causeCodeId} and subcause_code = {subcauseCodeId} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+        <Validate>tac = sqlTac,sgsnMme = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,7.eventId = sqlEventID,vendor = sqlVendor</Validate>
+    </RepeatValidation>
+        <Validate>7.failures = count{eventTime}</Validate>
+</TestCase>
+
+
+<!--__________________________________________________________Access Area Drill Downs__________________________________________________________-->
+
+
+<TestCase id="9">
+    <Direction>Drill on Access Area</Direction>
+    <Url><![CDATA[SUBSCRIBER/EVENT_ANALYSIS?dateFrom=01072014&dateTo=01072014&timeFrom=1215&timeTo=1415&display=grid&tzOffset=+0530&maxRows=500&key=SUM&type=CELL&cell={2.accessArea}&vendor={2.vendor}&bsc={2.controller}&RAT={2.ratId}]]></Url>
+    <CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&key=SUM&type=CELL&bsc={2.controller}&vendor={2.vendor}&cell={2.accessArea}&RAT={2.ratId}&dataTimeFrom=1415284200000&dataTimeTo=1415286000000&userName=admin&url=SUBSCRIBER/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+    <JSONVariables>1:ratId,2:vendor,3:controller,4:accessArea,5:eventId,6:eventType,7:failures,8:successes,9:totalEvents,10:succRatio,11:impactedSubs</JSONVariables>
+    <IgnoredInCsv>5:eventId</IgnoredInCsv>
+    <RepeatValidation instruction="all"> 
+        <SqlTest instruction="use:eventId"><![CDATA[select count(*) as 'sqlFailures' from EVENT_E_SGEH_ERR_RAW where DATETIME_ID >= '2014-07-01 03:30' and DATETIME_ID < '2014-07-01 09:30' and RAT = {2.ratId} and VENDOR = '{2.vendor}' and HIERARCHY_3 = '{2.controller}' and HIERARCHY_1 = '{2.accessArea}' AND EVENT_ID={eventId} and tac not in (select TAC from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest> 
+        <Validate>failures = sqlFailures</Validate> 
+        <SqlTest instruction="use:eventId"><![CDATA[select sum(no_of_successes) as 'sqlSuccesses' from EVENT_E_SGEH_VEND_HIER321_EVENTID_SUC_15MIN where DATETIME_ID >= '2014-07-01 03:30' and DATETIME_ID < '2014-07-01 09:30' and RAT = {2.ratId} and VENDOR = '{2.vendor}' and HIERARCHY_3 = '{2.controller}' and HIERARCHY_1 = '{2.accessArea}' AND EVENT_ID={eventId}]]></SqlTest> 
+        <Validate>successes = sqlSuccesses</Validate>
+        <SqlTest instruction="use:eventId"><![CDATA[select count(distinct(imsi)) as 'sqlImpacted' from EVENT_E_SGEH_ERR_RAW where DATETIME_ID >= '2014-07-01 03:30' and DATETIME_ID < '2014-07-01 09:30' and RAT = {2.ratId} and VENDOR = '{2.vendor}' and HIERARCHY_3 = '{2.controller}' and HIERARCHY_1 = '{2.accessArea}' AND EVENT_ID={eventId} and tac not in (select TAC from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest> 
+        <Validate>impactedSubs = sqlImpacted</Validate> 
+        <Validate>sqlFailures + sqlSuccesses = totalEvents</Validate> 
+        <Validate>( sqlSuccesses / totalEvents ) * 100 = succRatio</Validate>
+    </RepeatValidation>
+    <RepeatDrillDown instruction="all">10</RepeatDrillDown>
+    <PassToDrillDown id="10">accessArea,ratId,controller,vendor,eventId,failures</PassToDrillDown>       
+</TestCase>
+
+<TestCase id="10"> 
+    <PreCondition>9.failures > 0</PreCondition> 
+    <Direction>Drill on Failures from Access Area Failed Event Analysis</Direction> 
+    <Url><![CDATA[SUBSCRIBER/EVENT_ANALYSIS?dateFrom=01072014&dateTo=01072014&timeFrom=0930&timeTo=1530&display=grid&tzOffset=+0530&maxRows=500&key=ERR&type=CELL&dataTieredDelay=true&RAT={9.ratId}&cell={9.accessArea}&bsc={9.controller}&vendor={9.vendor}&eventID={9.eventId}]]></Url>
+    <CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&key=ERR&type=CELL&RAT={9.ratId}&vendor={9.vendor}&bsc={9.controller}&cell={9.accessArea}&eventID={9.eventId}&dataTimeFrom=1415284200000&dataTimeTo=1415286000000&userName=admin&url=SUBSCRIBER/EVENT_ANALYSIS&maxRows=0]]></CSVUrl> 
+    <JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventIdDesc,8:eventResDesc,9:causeProtDesc,10:causeCodeId,11:causeCodeDesc,12:subcauseCodeId,13:subcauseCodeDesc,14:sgsnMme,15:ratDesc,16:controller,18:accessArea,19:vendor,57:apn,74:eventResId,75:causeProtId,76:ratId</JSONVariables>
+    <IgnoredInCsv>72:causeCode,73:subcauseCode,74:eventResId,75:causeProtId</IgnoredInCsv>
+    <RepeatValidation instruction="all"> 
+        <SqlTest instruction="Use:ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {imsi} and tac = {tac} and event_time = '{eventTime}' and cause_code = {causeCodeId} and subcause_code = {subcauseCodeId} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+        <Validate>tac = sqlTac,sgsnMme = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,9.eventId = sqlEventID,vendor = sqlVendor</Validate>                        
+    </RepeatValidation>
+        <Validate>9.failures = count{eventTime}</Validate>
+</TestCase>
+
+
+<!--__________________________________________________________APN Drill Downs__________________________________________________________-->
+
+
+<TestCase id="11">
+    <Direction>Drill on Apn</Direction>
+    <Url><![CDATA[SUBSCRIBER/EVENT_ANALYSIS?time=30&display=grid&tzOffset=-0900&maxRows=500&key=SUM&type=APN&apn={2.apn}]]></Url>
+    <CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&key=SUM&type=APN&apn={2.apn}&dataTimeFrom=1415284200000&dataTimeTo=1415286000000&userName=admin&url=SUBSCRIBER/EVENT_ANALYSIS&maxRows=0]]></CSVUrl> 
+    <JSONVariables>1:apn,2:eventId,3:eventIdDesc,4:failures,5:successes,6:totalEvents,7:successRatio,8:impactedSubs</JSONVariables>
+    <IgnoredInCsv>2:eventId</IgnoredInCsv>
+    <RepeatValidation instruction="all">
+        <SqlTest instruction="use:eventId"><![CDATA[select count(*) as 'sqlFailures' from event_e_lte_err_raw where apn = '{apn}' and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') and event_id = {eventId}]]></SqlTest>
+        <Validate>failures = sqlFailures</Validate>
+
+        <SqlTest success_raw="false" instruction="use:eventId"><![CDATA[select sum(no_of_successes) as 'sqlSuccess' from EVENT_E_LTE_imsi_suc_raw where apn = '{apn}' and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and event_id = {eventId} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+        <SqlTest success_raw="true" instruction="use:eventId"><![CDATA[select count(*) as 'sqlSuccess' from EVENT_E_LTE_suc_raw where apn = '{apn}' and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and event_id = {eventId} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+        <Validate>successes = sqlSuccess</Validate>
+
+        <SqlTest instruction="use:eventId"><![CDATA[select count(distinct(imsi)) as 'sqlImpacted' from event_e_lte_err_raw where apn = '{apn}' and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and event_id = {eventId} and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+        <Validate>impactedSubs = sqlImpacted</Validate>
+
+        <Validate>successes + failures = totalEvents</Validate>
+        <Validate>( successes / totalEvents ) * 100 = successRatio</Validate>
+    </RepeatValidation>
+    <RepeatDrillDown instruction="all">12</RepeatDrillDown>
+    <PassToDrillDown id="12">apn,eventId,failures</PassToDrillDown>  
+</TestCase>
+
+<TestCase id="12">
+    <PreCondition>11.failures > 0</PreCondition> 
+    <Direction>Drill on Failures from APN Failed Event Analysis</Direction>
+    <Url><![CDATA[SUBSCRIBER/EVENT_ANALYSIS?time=30&display=grid&tzOffset=+0000&maxRows=500&key=ERR&type=APN&apn={11.apn}&eventID={11.eventId}]]></Url>
+    <CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&key=ERR&type=APN&apn={11.apn}&eventID={11.eventId}&dataTimeFrom=1415284200000&dataTimeTo=1415286000000&userName=admin&url=SUBSCRIBER/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+    <JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventIdDesc,8:eventResDesc,9:causeProtDesc,10:causeCodeId,11:causeCodeDesc,12:subcauseCodeId,13:subcauseCodeDesc,14:sgsnMme,15:ratDesc,16:controller,18:accessArea,19:vendor,57:apn,74:eventResId,75:causeProtId,76:ratId</JSONVariables>
+    <IgnoredInCsv>72:causeCode,73:subcauseCode,74:eventResId,75:causeProtId</IgnoredInCsv>
+    <RepeatValidation instruction="all"> 
+        <SqlTest instruction="Use:ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {imsi} and tac = {tac} and event_time = '{eventTime}' and cause_code = {causeCodeId} and subcause_code = {subcauseCodeId} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+        <Validate>tac = sqlTac,sgsnMme = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,11.eventId = sqlEventID,vendor = sqlVendor</Validate>                        
+    </RepeatValidation>
+        <Validate>11.failures = count{eventTime}</Validate>
+</TestCase>
+
+</TestSuite>

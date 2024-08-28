@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<TestCase id="1">
+<Direction>Launch -> 4G Radio Network -> 4G Ranking -> Call Setup Failure By Controller</Direction>
+<Url><![CDATA[NETWORK/LTE_CALL_FAILURE_RANKING_ANALYSIS/ENODEB/CALL_SETUP?time={time}&display=grid&tzOffset=%2B0530&maxRows=50]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=%2B0530&dataTimeFrom={time}&dataTimeTo={time}&userName=admin&url=NETWORK/LTE_CALL_FAILURE_RANKING_ANALYSIS/ENODEB/CALL_SETUP&maxRows=0]]></CSVUrl>
+ <IgnoredInCsv>1:hierThreeId,6:rat</IgnoredInCsv>
+<JSONVariables>1:hierThreeId,2:rank,3:ranVendor,4:controller,5:failures,6:rat</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count(*) as 'sqlFailures' from dc.EVENT_E_LTE_CFA_ERR_RAW where HIER3_ID = {hierThreeId} and CATEGORY_ID = 1 and DATETIME_ID >= '2015-02-10 12:31' and DATETIME_ID < '2015-02-10 13:01'and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+<Validate><![CDATA[ rank < 50 ]]></Validate>
+</RepeatValidation>
+<Validate>sort{rank} = asc</Validate>
+<Validate>sort{failures} = desc</Validate>
+</TestCase>
+</TestSuite>

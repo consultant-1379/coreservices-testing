@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+<TestCase id="1">
+<Direction> Launch -> IMSI Group -> 3G Event Trace -> Call Failure </Direction>
+<Url><![CDATA[SUBSCRIBER/WCDMA/CALL_FAILURE_EVENT_ANALYSIS/SUMMARY?time=10080&type=IMSI&groupname={-master-RANCFAIMSIGroup}&display=grid&tzOffset=%2B0530&maxRows=500]]></Url>
+<JSONVariables>1:eventType,2:failures,3:impactedSubscriber,4:eventId,5:groupId</JSONVariables>
+<Validate>-master-RANCFAIMSIGroup- = groupId</Validate>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[SELECT count(*) as 'sqlFailures' FROM EVENT_E_RAN_CFA_ERR_RAW as RAW, GROUP_TYPE_E_IMSI as GRP WHERE DATETIME_ID >= '2015-20-03 00:00' and DATETIME_ID < '2015-02-04 00:00' AND GRP.IMSI = RAW.IMSI and GRP.GROUP_NAME = '{groupId}' AND RAW.event_id = {eventId}]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+</RepeatValidation>
+<Validate>sort{failures} = desc</Validate>
+<RepeatDrillDown instruction="all">2</RepeatDrillDown>
+<PassToDrillDown id="2">groupId,failures,eventId</PassToDrillDown>
+</TestCase>
+
+<TestCase id="2">
+<PreCondition>1.failures >0</PreCondition>
+<Direction> Drill on failures </Direction>
+<Url><![CDATA[SUBSCRIBER/WCDMA/CALL_FAILURE_EVENT_ANALYSIS/DRILL_DOWN?time=10080&display=grid&tzOffset=%2B0530&maxRows=500&eventID={1.eventId}&groupname={1.groupId}]]></Url>
+<JSONVariables>1:eventTime,2:IMSI,3:TAC,4:TerminalMake,5:TerminalModel,44:csErr,45:psErr,46:multiErr</JSONVariables>
+<Validate>1.failures = count{eventTime}</Validate>
+<RepeatValidation instruction="all">
+   <SqlTest><![CDATA[select isnull(CAST(rawview.imsi as varchar),' ') as 'sqlIMSI' ,isnull(CAST(rawview.tac as varchar),' ') as 'sqlTAC',
+case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown')
+WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') else ' ' end as 'sqlMake' ,
+case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Unknown')
+WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Invalid') else ' ' end as 'sqlModel'
+from(select imsi,TAC from EVENT_E_RAN_CFA_ERR_RAW where imsi = {IMSI}
+and EVENT_TIME = '{eventTime}' and DATETIME_ID >= '2015-03-19 12:02' and DATETIME_ID < '2015-03-19 12:32'
+and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) as rawview, DIM_E_SGEH_TAC where rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+<Validate>IMSI=sqlIMSI,TAC=sqlTAC,TerminalMake=sqlMake,TerminalModel=sqlModel</Validate>
+</RepeatValidation>
+</TestCase>
+</TestSuite>

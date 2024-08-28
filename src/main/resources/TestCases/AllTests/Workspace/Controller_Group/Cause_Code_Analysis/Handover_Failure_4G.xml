@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TestSuite>
+<TestCase id="1">
+<Direction>Launch -> Controller Group -> Cause Code Analysis -> HandOver Failure 4G</Direction>
+<Url><![CDATA[NETWORK/LTE_HFA_CAUSE_CODE_ANALYSIS/PIE_CHART_CC_LIST?type=BSC&groupname={-master-LTEHFAGroup}&time={time}&tzOffset=%2B0530]]></Url>
+<JSONVariables>1:CC,2:ccDesc</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count (*) as 'sqlcauseCode' from (select count (distinct CAUSE_CODE) as a from dc.EVENT_E_LTE_HFA_ERR_RAW as errRef, dc.GROUP_TYPE_E_RAT_VEND_HIER3 enodeBGroup where enodeBGroup.GROUP_NAME = '{-master-LTEHFAGroup}' and enodeBGroup.HIER3_ID = errRef.HIER3_ID and DATETIME_ID >= '2015-02-13 09:10' and DATETIME_ID < '2015-02-13 09:40' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and errRef.CAUSE_CODE is not null group by CAUSE_CODE, EVENT_ID) as number]]></SqlTest>
+<Validate>count{CC} = sqlcauseCode</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">2,4</RepeatDrillDown>
+<PassToDrillDown id="4">CC</PassToDrillDown>
+</TestCase>
+
+<!--__________________________________________________________Grid View__________________________________________________________-->
+
+<TestCase id="2">
+<Direction>Click on Grid View</Direction>
+<Url><![CDATA[NETWORK/LTE_HFA_CAUSE_CODE_ANALYSIS/CAUSE_CODE_ANALYSIS?time={time}&type=BSC&groupname={-master-LTEHFAGroup}&display=grid&tzOffset=%2B0530&maxRows=500]]></Url>
+<JSONVariables>1:groupName,2:eventID,3:CCDesc,4:CCID,6:occurrence,7:impacSubs</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count (*) as 'sqlOccurence' from EVENT_E_LTE_HFA_ERR_RAW,GROUP_TYPE_E_RAT_VEND_HIER3 group_table where  DATETIME_ID >= '2015-02-13 06:45' and DATETIME_ID < '2015-02-13 07:15' and ISNULL(EVENT_E_LTE_HFA_ERR_RAW.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and EVENT_E_LTE_HFA_ERR_RAW.HIER3_ID = group_table.HIER3_ID and CAUSE_CODE is not null and event_id = {eventID} and cause_code = {CCID} and group_table.GROUP_NAME = '{-master-LTEHFAGroup}' group by EVENT_ID,CAUSE_CODE]]></SqlTest>
+<Validate>occurrence = sqlOccurence</Validate>
+<SqlTest><![CDATA[select count (distinct imsi) as 'sqlImpacsubs' from EVENT_E_LTE_HFA_ERR_RAW,GROUP_TYPE_E_RAT_VEND_HIER3 group_table where  DATETIME_ID >= '2015-02-13 06:45' and DATETIME_ID < '2015-02-13 07:15' and ISNULL(EVENT_E_LTE_HFA_ERR_RAW.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and EVENT_E_LTE_HFA_ERR_RAW.HIER3_ID = group_table.HIER3_ID and CAUSE_CODE is not null and event_id = {eventID} and group_table.GROUP_NAME = '{-master-LTEHFAGroup}' group by EVENT_ID,CAUSE_CODE]]></SqlTest>
+<Validate>impacSubs = sqlImpacsubs</Validate>
+</RepeatValidation>
+<Validate>sort{occurrence} = desc</Validate>
+<RepeatDrillDown instruction="all">3</RepeatDrillDown>
+<PassToDrillDown id="3">eventID,occurrence,CCID</PassToDrillDown>
+</TestCase>
+
+<TestCase id="3">
+<Direction>Drill On occurrence</Direction>
+<Url><![CDATA[NETWORK/LTE_HANDOVER_FAILURE_SUBSCRIBER_DETAILED_EVENT_ANALYSIS/CAUSE_CODE_ENODEB?time={time}&display=grid&tzOffset=%2B0530&maxRows=500&groupname={-master-LTEHFAGroup}&eventID={2.eventID}&causeCode={2.CCID}]]></Url>
+<JSONVariables>5:eventTime,7:IMSI,8:TAC,9:MAnufacturer,10:MOdel,11:eventID</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select isnull(CAST(rawview.imsi as varchar),' ') as 'sqlImsi' ,rawview.tac as 'sqlTac', case WHEN (rawview.TAC != NULL AND rawview.TAC != 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') ELSE ' ' END AS 'sqlMake', case when (rawview.TAC != NULL AND  rawview.TAC != 0 ) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME,'Model Unknown') when (rawview.TAC = 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME,'Model Invalid') else ' ' end AS 'sqlModel'from (select tac,imsi from EVENT_E_LTE_HFA_ERR_RAW,GROUP_TYPE_E_RAT_VEND_HIER3 group_table where event_time = '{eventTime}'and  DATETIME_ID >= '2015-02-13 06:45' and DATETIME_ID < '2015-02-13 07:15' and EVENT_E_LTE_HFA_ERR_RAW.EVENT_ID = {2.eventID} and EVENT_E_LTE_HFA_ERR_RAW.CAUSE_CODE = {2.CCID} and imsi={IMSI} and ISNULL(EVENT_E_LTE_HFA_ERR_RAW.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and EVENT_E_LTE_HFA_ERR_RAW.HIER3_ID = group_table.HIER3_ID and group_table.GROUP_NAME = '{-master-LTEHFAGroup}')AS rawview, DIM_E_SGEH_TAC WHERE rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+<Validate>2.eventID = eventID,IMSI = sqlImsi,MAnufacturer = sqlMake,MOdel = sqlModel,TAC = sqlTac</Validate>
+</RepeatValidation>
+<Validate>2.occurrence = count{eventTime}</Validate>
+</TestCase>
+
+__________________________________________________________Chart View__________________________________________________________
+
+<TestCase id="4">
+<Direction>Click on Chart View</Direction>
+<Url><![CDATA[NETWORK/LTE_HFA_CAUSE_CODE_ANALYSIS/PIE_CHART_CAUSE_CODE_ANALYSIS?time={time}&type=BSC&groupname={-master-LTEHFAGroup}&display=chart&tzOffset=%2B0530&maxRows=500&causeCodeIds={1.CC}]]></Url>
+<JSONVariables>1:CC,2:CCDesc,3:failures,4:impacSubs,5:eventId,6:eventDesc</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select sum(isnull(err.NO_OF_ERRORS, 0)) as 'sqlFailures' from ( select errRef.CAUSE_CODE as CAUSE_CODE,count(*),IMSI,errRef.EVENT_ID as EVENT_ID from EVENT_E_LTE_HFA_ERR_RAW errRef,GROUP_TYPE_E_RAT_VEND_HIER3 enodeBGroup where event_id = {eventId} and cause_code = {CC} and enodeBGroup.GROUP_NAME = '{-master-LTEHFAGroup}' and enodeBGroup.HIER3_ID = errRef.HIER3_ID and errRef.CAUSE_CODE is not null and DATETIME_ID >= '2015-02-23 18:30' and DATETIME_ID < '2015-03-02 18:30' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and (( errRef.EVENT_ID = 4105 and errRef.CAUSE_CODE = 1) or ( errRef.EVENT_ID = 4104 and errRef.CAUSE_CODE = 1) or ( errRef.EVENT_ID = 4113 and errRef.CAUSE_CODE = 1) or ( errRef.EVENT_ID = 4112 and errRef.CAUSE_CODE = 1) or ( errRef.EVENT_ID = 4102 and errRef.CAUSE_CODE = 1) or ( errRef.EVENT_ID = 4110 and errRef.CAUSE_CODE = 1)) group by IMSI, CAUSE_CODE, EVENT_ID ) as err (CAUSE_CODE, NO_OF_ERRORS, IMSI, EVENT_ID) group by err.CAUSE_CODE, err.EVENT_ID]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+<SqlTest><![CDATA[select count(distinct(IMSI)) as 'sqlImpacted' from ( select errRef.CAUSE_CODE as CAUSE_CODE,count(*),IMSI,errRef.EVENT_ID as EVENT_ID from EVENT_E_LTE_HFA_ERR_RAW errRef,GROUP_TYPE_E_RAT_VEND_HIER3 enodeBGroup where enodeBGroup.GROUP_NAME = '{-master-LTEHFAGroup}' and enodeBGroup.HIER3_ID = errRef.HIER3_ID and errRef.CAUSE_CODE is not null and DATETIME_ID >= '2015-02-13 10:32' and DATETIME_ID < '2015-02-13 11:02' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and (( errRef.EVENT_ID = 4105 and errRef.CAUSE_CODE = 1) or ( errRef.EVENT_ID = 4104 and errRef.CAUSE_CODE = 1) or ( errRef.EVENT_ID = 4113 and errRef.CAUSE_CODE = 1) or ( errRef.EVENT_ID = 4112 and errRef.CAUSE_CODE = 1) or ( errRef.EVENT_ID = 4102 and errRef.CAUSE_CODE = 1) or ( errRef.EVENT_ID = 4110 and errRef.CAUSE_CODE = 1)) group by IMSI, CAUSE_CODE, EVENT_ID ) as err (CAUSE_CODE, NO_OF_ERRORS, IMSI, EVENT_ID) group by err.CAUSE_CODE, err.EVENT_ID]]></SqlTest>
+<Validate>impacSubs = sqlImpacted</Validate>
+</RepeatValidation>
+<Validate>sort{failures} = desc</Validate>
+<RepeatDrillDown instruction="all">5</RepeatDrillDown>
+<PassToDrillDown id="5">CC,eventId,failures</PassToDrillDown>
+</TestCase>
+
+<TestCase id="5">
+<Direction>Drill on Cause Code Pie Chart</Direction>
+<Url><![CDATA[NETWORK/LTE_HFA_CAUSE_CODE_ANALYSIS/DETAIL_CAUSE_CODE_GRID?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&type=BSC&groupname={-master-LTEHFAGroup}&display=grid&causeCode={4.CC}&eventID={4.eventId}&tzOffset=%2B0530&maxRows=50]]></Url>
+<JSONVariables>5:eventTime,7:IMSI</JSONVariables>
+<Validate>4.failures = count{IMSI}</Validate>
+</TestCase>
+</TestSuite>

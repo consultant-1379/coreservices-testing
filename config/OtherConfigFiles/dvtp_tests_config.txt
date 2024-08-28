@@ -1,0 +1,8 @@
+AllTests\Workspace\Core_PS_Network\Data_Volume_Ranking\APN.xml
+AllTests\Workspace\Core_PS_Network\Data_Volume_Ranking\APN_GROUP.xml
+AllTests\Workspace\Core_PS_Network\Data_Volume_Ranking\GGSN.xml
+AllTests\Workspace\Core_PS_Network\Data_Volume_Ranking\IMSI.xml
+AllTests\Workspace\Core_PS_Network\Data_Volume_Ranking\IMSI_GROUP.xml
+AllTests\Workspace\Core_PS_Network\Data_Volume_Ranking\TERMINAL.xml
+AllTests\Workspace\Core_PS_Network\Data_Volume_Ranking\TERMINAL_GROUP.xml
+AllTests\Workspace\Core_PS_Network\Network_Data_Volume\Core_PS.xml

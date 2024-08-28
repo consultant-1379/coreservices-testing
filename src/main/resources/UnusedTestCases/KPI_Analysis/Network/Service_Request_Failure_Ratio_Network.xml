@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TestSuite> 
+
+<TestCase id="1">
+<Direction>KPI Analysis -> Network</Direction> 
+<Url><![CDATA[SESSION_BROWSER/SESSION_KPI/CORE/KPI_CHART?time=60&tzOffset=+0100]]></Url> 
+<JSONVariables>kpiTime:kpiTime,Attach Success Rate:attachSuccRate,Detach Success Rate:detachSuccRate,ISRAU Success Rate:israuRate,PDP Context Activation Success Rate:pdpActivation,PDP Context Cutoff Ratio:pdpCutoff,Paging Failure Ratio:pagingFailure,RAU Success Rate:rauSucc,Service Request Failure Ratio:serviceRatio</JSONVariables>  
+<RepeatValidation instruction="all"> 
+	<!--<SqlTest><![CDATA[select count(*) as 'sqlRequestNetwork' from event_e_sgeh_err_raw where DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30' and {kpiTime} and event_id = 15 and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC') and deactivation_trigger != 1]]></SqlTest>  
+	<SqlTest><![CDATA[select sum(no_of_net_init_deactivates) as 'sqlRequestTotal' from EVENT_E_SGEH_VEND_HIER3_EVENTID_SUC_15MIN where DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30' and {kpiTime} and event_id = 15]]></SqlTest> -->
+	<SqlTest><![CDATA[select count(*) as 'sqlRequestNetwork' from event_e_sgeh_err_raw where DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30' and event_id = 2]]></SqlTest>  
+	<SqlTest><![CDATA[select sum(no_of_successes) as 'sqlRequestTotal' from EVENT_E_SGEH_VEND_HIER3_EVENTID_SUC_15MIN where DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30' and event_id = 2]]></SqlTest>
+	<Validate>( sqlRequestNetwork / ( sqlRequestTotal + sqlRequestNetwork ) ) * 100 = serviceRatio</Validate>
+</RepeatValidation> 
+</TestCase>
+
+</TestSuite>

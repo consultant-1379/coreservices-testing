@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestGroup>
+<TestSuite>
+
+<TestCase id="1">
+<Direction>Launch -> Terminal -> Enter Terminal -> Core Terminal Event Analysis -> Core PS</Direction>
+<Url><![CDATA[TERMINAL/EVENT_ANALYSIS?time=30&type=TAC&node={-master-terminalNode}&display=grid&key=SUM&tzOffset=+0100&maxRows=500]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?type=TAC&node={-master-terminalNode}&display=grid&key=SUM&tzOffset=+0100&dataTimeFrom=1413982800000&dataTimeTo=1413984600000&userName={-master-username}&url=TERMINAL/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+<JSONVariables>1:manuf,2:model,3:tac,4:eventId,5:eventIdDesc,6:failures,7:success,8:totalEvents,9:successRatio,10:impactedSubs</JSONVariables>
+<IgnoredInCsv>4:eventId</IgnoredInCsv>
+<RepeatValidation instruction="all">
+    <SqlTest instruction="plus:sgeh"><![CDATA[select count(*) as 'sqlFailures' from event_e_lte_err_raw where tac = {tac} and event_id = {eventId} and DATETIME_ID >= '2014-05-14 10:00' and DATETIME_ID < '2014-05-18 22:00']]></SqlTest>
+    <Validate>failures = sqlFailures</Validate>
+
+    <SqlTest success_raw="false" instruction="plus:sgeh"><![CDATA[select sum(no_of_successes) as 'sqlSuccess' from EVENT_E_lte_imsi_suc_raw  where tac = {tac} and event_id = {eventId} and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00']]></SqlTest>
+    <SqlTest success_raw="true" instruction="plus:sgeh"><![CDATA[select count(*) as 'sqlSuccess' from EVENT_E_lte_suc_raw  where tac = {tac} and event_id = {eventId} and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00']]></SqlTest>
+    <Validate>success = sqlSuccess</Validate>
+
+    <Validate>success + failures = totalEvents</Validate>
+    <Validate>( success / totalEvents ) * 100 = successRatio</Validate>
+
+    <SqlTest instruction="distinctPlus:sgeh"><![CDATA[select count(distinct(imsi)) as 'sqlImpacted' from event_e_lte_err_raw where tac = {tac} and event_id = {eventId} and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00']]></SqlTest>
+<Validate>impactedSubs = sqlImpacted</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">2</RepeatDrillDown>
+<PassToDrillDown id="2">tac,eventId,failures</PassToDrillDown>
+</TestCase>
+
+
+<TestCase id="2">
+<PreCondition>1.failures > 50</PreCondition>
+<Direction>Drill on Failures</Direction>
+<Url><![CDATA[TERMINAL/EVENT_ANALYSIS?dateFrom=23062014&dateTo=23062014&timeFrom=0300&timeTo=1500&display=grid&tzOffset=+0100&maxRows=500&type=TAC&key=ERR&dataTieredDelay=true&tac={1.tac}&eventID={1.eventId}]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0100&type=TAC&key=ERR&dataTieredDelay=true&tac={1.tac}&eventID={1.eventId}&dataTimeFrom=1413982800000&dataTimeTo=1413984600000&userName={-master-username}&url=TERMINAL/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+<JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventIdDesc,8:eventResDesc,9:causeProtDesc,10:causeCodeID,11:causeCodeDesc,12:subCauseCodeID,13:subCauseCodeDesc,14:SGSNMME,15:ratDesc,16:controller,18:accessArea,19:vendor,57:apn,76:ratID</JSONVariables>
+<IgnoredInCsv>72:sysCauseCode,73:sysSubcause,74:sysEventRes,75:sysCauseProt</IgnoredInCsv>
+<RepeatValidation instruction="random10">
+    <SqlTest instruction="Use:ratID"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {imsi} and event_time = '{eventTime}' and cause_code = {causeCodeID} and subcause_code = {subCauseCodeID} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00']]></SqlTest>
+    <Validate>tac = sqlTac,SGSNMME = sqlEventSourceName,ratID = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,1.eventId = sqlEventID,vendor = sqlVendor</Validate>
+</RepeatValidation>
+<Validate>sort{eventTime} = desc</Validate>
+<Validate>1.failures = count{eventTime}</Validate>
+</TestCase>
+</TestSuite>
+
+
+</TestGroup>

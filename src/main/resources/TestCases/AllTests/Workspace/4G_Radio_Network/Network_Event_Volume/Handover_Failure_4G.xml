@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<!--__________________________________________________________Grid View__________________________________________________________-->
+<TestCase id="1">
+<Direction>Launch -> 4G Radio Network -> Network Event Volume -> HandOver Failure (4G) -> Grid View</Direction>
+<Url><![CDATA[NETWORK/LTE_HFA_EVENT_VOLUME/NETWORK_EVENT_VOLUME?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=+0530&maxRows=500]]></Url>
+<JSONVariables>1:eventVolumeTime,2:PrepXTwoInFailures,3:PrepXTwoOutFailures,4:ExecXTwoInFailures,5:ExecXTwoOutFailures,6:PrepSOneInFailures,7:PrepSOneOutFailures,8:ExecSOneInFailures,9:ExecSOneOutFailures</JSONVariables>
+<RepeatValidation instruction="all">
+
+<SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlIntProcHoPrepXTwoInFailures' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.event_id = 4111]]></SqlTest>
+<Validate>PrepXTwoInFailures = sqlIntProcHoPrepXTwoInFailures</Validate>
+<SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlIntProcHoExecXTwoInFailures' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.event_id = 4110]]></SqlTest>
+<Validate>ExecXTwoInFailures = sqlIntProcHoExecXTwoInFailures</Validate>
+<SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlIntProcHoExecXTwoOutFailures' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.event_id = 4113]]></SqlTest>
+<Validate>ExecXTwoOutFailures = sqlIntProcHoExecXTwoOutFailures</Validate>
+<SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlIntProcHoExecXTwoOutFailures' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.event_id = 4112]]></SqlTest>
+<Validate>ExecXTwoOutFailures = sqlIntProcHoExecXTwoOutFailures</Validate>
+<SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlIntProcHoPrepSOneInFailures' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.event_id = 4102]]></SqlTest>
+<Validate>PrepSOneInFailures = sqlIntProcHoPrepSOneInFailures</Validate>
+<SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlIntProcHoPrepSOneOutFailures' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.event_id = 4103]]></SqlTest>
+<Validate>PrepSOneOutFailures = sqlIntProcHoPrepSOneOutFailures</Validate>
+<SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlIntProcHoExecSOneInFailures' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.event_id = 4104]]></SqlTest>
+<Validate>ExecSOneInFailures = sqlIntProcHoExecSOneInFailures</Validate>
+<SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlIntProcHoExecSOneOutFailures' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.event_id = 4105]]></SqlTest>
+<Validate>ExecSOneOutFailures = sqlIntProcHoExecSOneOutFailures</Validate>
+
+</RepeatValidation>
+<Validate>sort{eventVolumeTime} = asc</Validate>
+<RepeatDrillDown instruction="all">2</RepeatDrillDown>
+</TestCase>
+
+<!--__________________________________________________________Chart View__________________________________________________________-->
+
+<TestCase id="2">
+<Direction>Drill On Chart View</Direction>
+<Url><![CDATA[NETWORK/LTE_HFA_EVENT_VOLUME/NETWORK_EVENT_VOLUME?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=chart&tzOffset=%2B0530&maxRows=500]]></Url>
+<JSONVariables>1:eventVolumeTime,2:PrepXTwoInFailures,3:PrepXTwoOutFailures,4:ExecXTwoInFailures,5:ExecXTwoOutFailures,6:PrepSOneInFailures,7:PrepSOneOutFailures,8:ExecSOneInFailures,9:ExecSOneOutFailures</JSONVariables>
+<RepeatValidation instruction="all">
+
+<SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlIntProcHoPrepXTwoInFailures' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.event_id = 4111]]></SqlTest>
+<Validate>PrepXTwoInFailures = sqlIntProcHoPrepXTwoInFailures</Validate>
+<SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlIntProcHoExecXTwoInFailures' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.event_id = 4110]]></SqlTest>
+<Validate>ExecXTwoInFailures = sqlIntProcHoExecXTwoInFailures</Validate>
+<SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlIntProcHoExecXTwoOutFailures' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.event_id = 4113]]></SqlTest>
+<Validate>ExecXTwoOutFailures = sqlIntProcHoExecXTwoOutFailures</Validate>
+<SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlIntProcHoExecXTwoOutFailures' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.event_id = 4112]]></SqlTest>
+<Validate>ExecXTwoOutFailures = sqlIntProcHoExecXTwoOutFailures</Validate>
+<SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlIntProcHoPrepSOneInFailures' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.event_id = 4102]]></SqlTest>
+<Validate>PrepSOneInFailures = sqlIntProcHoPrepSOneInFailures</Validate>
+<SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlIntProcHoPrepSOneOutFailures' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.event_id = 4103]]></SqlTest>
+<Validate>PrepSOneOutFailures = sqlIntProcHoPrepSOneOutFailures</Validate>
+<SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlIntProcHoExecSOneInFailures' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.event_id = 4104]]></SqlTest>
+<Validate>ExecSOneInFailures = sqlIntProcHoExecSOneInFailures</Validate>
+<SqlTest><![CDATA[select isnull(count(*), 0) as 'sqlIntProcHoExecSOneOutFailures' from EVENT_E_LTE_HFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.event_id = 4105]]></SqlTest>
+<Validate>ExecSOneOutFailures = sqlIntProcHoExecSOneOutFailures</Validate>
+
+</RepeatValidation>
+<Validate>sort{eventVolumeTime} = asc</Validate>
+</TestCase>
+</TestSuite>

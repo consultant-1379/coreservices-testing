@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<TestCase id="1">
+<Direction> Launch -> 3G Radio Network -> 3G Cause Code Ranking -> Handover Failure </Direction>
+<Url><![CDATA[NETWORK/WCDMA_HANDOVER_FAILURE_RANKING_ANALYSIS/causeCode?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=%2B0000]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=%2B0100&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/WCDMA_HANDOVER_FAILURE_RANKING_ANALYSIS/causeCode&maxRows=0]]></CSVUrl>
+<IgnoredInCsv>7:eventId</IgnoredInCsv>
+<JSONVariables>1:rank,3:categoryId,4:causeDesc,5:causeValue,6:failures,7:eventId</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest instruction="Use:categoryId"><![CDATA[select count(*) as 'sqlFailures' from EVENT_E_RAN_HFA_SOHO_ERR_RAW where DATETIME_ID >= '2015-02-13 15:15' and DATETIME_ID < '2015-02-13 15:45' and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and cause_value = {causeValue} and event_id = {eventId} ]]></SqlTest>
+<SqlTest><![CDATA[select CAUSE_VALUE_DESC as 'sqlCauseDesc' from DIM_E_RAN_HFA_CAUSE_CODE_VALUE where cause_value = {causeValue} and event_id = {eventId}]]></SqlTest>
+<Validate>failures = sqlFailures, causeDesc = sqlCauseDesc</Validate>
+<Validate><![CDATA[ rank < 50 ]]></Validate>
+<Validate>sort{failures} = desc</Validate>
+<Validate>sort{rank} = asc</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="ALL">2</RepeatDrillDown>
+<PassToDrillDown id="2">failures,categoryId,causeDesc,causeValue,eventId</PassToDrillDown>
+</TestCase>
+
+<TestCase id="2">
+<precondition>1.causeValue != EMPTY</precondition>
+<precondition>1.categoryId != 1</precondition>
+<Direction> Drill on Cause Code </Direction>
+<Url><![CDATA[NETWORK/WCDMA_HANDOVER_FAILURE_RANKING_ANALYSIS/causeCode/drilldown?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&categoryId={1.categoryId}&causeCodeDescription={1.causeDesc}&causeCode={1.causeValue}&eventID={1.eventId}&display=grid&tzOffset=%2B0000]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?categoryId={1.categoryId}&causeCodeDescription={1.causeDesc}&causeCode={1.causeValue}&eventID={1.eventId}&display=grid&tzOffset=%2B0100&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/WCDMA_HANDOVER_FAILURE_RANKING_ANALYSIS/causeCode/drilldown&maxRows=0]]></CSVUrl>
+<JSONVariables>1:subCauseCode,2:subCauseDesc,3:subFailures,4:impactedSubscibers</JSONVariables>
+<Validate>1.failures = sum{subFailures}</Validate>
+<RepeatValidation instruction="all">
+ <SqlTest instruction="Use:1.categoryId"><![CDATA[select count(*) as 'sqlSubFailures',count( distinct imsi) as 'sqlImpactedSubs' from EVENT_E_RAN_HFA_SOHO_ERR_RAW where DATETIME_ID >= '2015-02-13 15:15' and DATETIME_ID < '2015-02-13 15:45' and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and cause_value = {1.causeValue} and sub_cause_value = {subCauseCode} and event_id ={1.eventId}]]></SqlTest>
+<Validate>subFailures = sqlSubFailures,impactedSubscibers=sqlImpactedSubs</Validate>
+</RepeatValidation>
+</TestCase>
+
+</TestSuite>

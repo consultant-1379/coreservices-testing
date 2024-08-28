@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<TestCase id="1">
+<Direction> Launch -> 3G Radio Network -> 3G Disconnection Code Ranking -> Call Drops </Direction>
+<MaxValidation>6</MaxValidation>
+<Url><![CDATA[NETWORK/CALL_FAILURE_RANKING_ANALYSIS/DISCONNECTION/CALL_DROPS?dateFrom=17022015&dateTo=17022015&timeFrom=1215&timeTo=1245&display=grid&tzOffset=%2B0000]]></Url>
+<JSONVariables>3:failures,5:causeId,6:subCauseId</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count(*) as 'sqlFailures' from EVENT_E_RAN_CFA_ERR_RAW where DATETIME_ID >= '2015-02-17 12:15' and DATETIME_ID < '2015-02-17 12:45' and EVENT_ID = {-master-WcdmaCallDropId} and RAN_DISCONNECTION_CODE = {causeId} and RAN_DISCONNECTION_SUBCODE = {subCauseId} and NE_version = '{-master-WcdmaNEVersion}']]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+</RepeatValidation>
+</TestCase>
+
+</TestSuite>

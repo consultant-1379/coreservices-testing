@@ -1,0 +1,1 @@
+AR_RAT_GROUP; GROUP_TYPE_E_RAT; select top 2 rat as 'RAT' from dim_e_sgeh_rat group by rat

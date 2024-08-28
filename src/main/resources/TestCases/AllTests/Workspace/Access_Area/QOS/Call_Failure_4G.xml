@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+<TestCase id="1">
+   <Direction>Launch -> Access Area -> QOS -> Call Failure(4G)</Direction>
+   <Url><![CDATA[NETWORK/LTE_CFA_QOS_SUMMARY_ANALYSIS/QCI_CATEGARY_SUMMARY?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&type=CELL&node={-master-LTEAccessArea}&display=grid&tzOffset=%2B0000&maxRows=500]]></Url>
+   <CSVUrl><![CDATA[EniqEventsCSV.jsp?type=CELL&node={-master-LTEAccessArea}&display=grid&tzOffset=%2B0530&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/LTE_CFA_QOS_SUMMARY_ANALYSIS/QCI_CATEGARY_SUMMARY&maxRows=0]]></CSVUrl>
+   <IgnoredInCsv>1:jsonHierThreeTwoOneId,4:jsonCatId,8:accessArea,9:accessAreaDesc,10:vendor</IgnoredInCsv>
+   <JSONVariables>1:jsonHierThreeTwoOneId,2:jsonQCIId,3:jsonQCIDesc,4:jsonCatId,5:jsonCatDesc,6:jsonFailures,7:jsonImpactedSubs,8:accessArea,9:accessAreaDesc,10:vendor</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[select count(*) as 'sqlFailures', count(distinct IMSI) as 'sqlimpactedSubscribers' from EVENT_E_LTE_CFA_ARRAY_ERAB_ERR_RAW where HIER321_ID = {jsonHierThreeTwoOneId} and QCI_ID={jsonQCIId} and  CATEGORY_ID={jsonCatId} and DATETIME_ID >= '2015-03-15 05:00' and DATETIME_ID < '2015-03-16 05:00' and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+   <Validate>jsonFailures=sqlFailures,jsonImpactedSubs=sqlimpactedSubscribers</Validate>
+   </RepeatValidation>
+   <Validate>sort{jsonQCIId}=asc</Validate>
+   <RepeatDrillDown instruction="all">2</RepeatDrillDown>
+   <PassToDrillDown id="2">jsonHierThreeTwoOneId,jsonQCIId,jsonCatId,jsonFailures</PassToDrillDown>
+</TestCase>
+
+<TestCase id="2">
+   <Direction>Drill on Failure Category</Direction>
+   <Url><![CDATA[NETWORK/LTE_CFA_QOS_SUMMARY_ANALYSIS/QCI_EVENT_SUMMARY/ECELL?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=%2B0000&maxRows=500&HIER321_ID={1.jsonHierThreeTwoOneId}&QCI_ID={1.jsonQCIId}&CATEGORY_ID={1.jsonCatId}]]></Url>
+   <CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=%2B0530&HIER321_ID={1.jsonHierThreeTwoOneId}&QCI_ID={1.jsonQCIId}&CATEGORY_ID={1.jsonCatId}&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/LTE_CFA_QOS_SUMMARY_ANALYSIS/QCI_EVENT_SUMMARY/ECELL&maxRows=0]]></CSVUrl>
+   <IgnoredInCsv>1:jsonHierThreeTwoOneId,2:jsonQCIId,3:jsonEventID</IgnoredInCsv>
+   <JSONVariables>1:jsonHierThreeTwoOneId,2:jsonQCIId,3:jsonEventID,4:jsonEventDesc,5:jsonFailures,6:jsonImpactedSubs</JSONVariables>
+   <Validate>1.jsonFailures=sum{jsonFailures}</Validate>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[select count(*)as 'sqlFailures', count(distinct IMSI) as 'sqlimpactedSubscribers' from EVENT_E_LTE_CFA_ARRAY_ERAB_ERR_RAW where HIER321_ID = {jsonHierThreeTwoOneId} and QCI_ID = {jsonQCIId} and EVENT_ID={jsonEventID} and DATETIME_ID >= '2015-03-15 05:00' and DATETIME_ID < '2015-03-16 05:00' and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+   <Validate>jsonFailures=sqlFailures,jsonImpactedSubs=sqlimpactedSubscribers</Validate>
+   </RepeatValidation>
+   <RepeatDrillDown instruction="all">3,4</RepeatDrillDown>
+   <PassToDrillDown id="3">jsonHierThreeTwoOneId,jsonQCIId,jsonEventID,jsonFailures</PassToDrillDown>
+   <PassToDrillDown id="4">jsonHierThreeTwoOneId,jsonQCIId,jsonEventID,jsonFailures</PassToDrillDown>
+</TestCase>
+
+<TestCase id="3">
+   <PreCondition>2.jsonFailures > 0</PreCondition>
+   <PreCondition>2.jsonEventID != 4114</PreCondition><!-- The new event INTERNAL_PROC_ERAB_RELEASE with event id 4114 has additional columns -->
+   <Direction>Drill on Failures</Direction><!-- csv export validation for detailed window will be cover under jiraNO:EQEV-26708 -->
+   <Url><![CDATA[NETWORK/LTE_CFA_QOS_DETAILED_EVENT_ANALYSIS/QCI/ECELL?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=%2B0000&maxRows=500&HIER321_ID={2.jsonHierThreeTwoOneId}&QCI_ID={2.jsonQCIId}&eventID={2.jsonEventID}]]></Url>
+   <JSONVariables>1:jsonHierThreeId,2:jsonHierThreeTwoOneId,3:eventTime,4:jsonIMSI,5:jsonTAC,6:jsonTerminalMake,7:jsonTerminalModel,8:jsoneventType,9:jsonController,10:jsonAccessArea,11:jsonVendor,12:jsonRAT,13:jsonSetupResult,14:jsonSetReqQCI,15:jsonSetReqARP,16:jsonSetReqPCI,17:jsonSetReqPVI,18:jsonFailThreeGPP,19:jsonSetupATTACC,20:jsonSetupACCType,21:jsonFailThreeGPPCauseGrp</JSONVariables>
+   <Validate>2.jsonFailures=count{eventTime}</Validate>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[select isnull(CAST(rawview.imsi as varchar),' ') as 'sqlIMSI' ,rawview.hier3_id as 'sqlHierThreeId',rawview.event_id as 'sqlEventid', isnull(CAST(rawview.tac as varchar),' ') as 'sqlTac',case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') else ' ' end as 'sqlMake' , case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Invalid') else ' ' end as 'sqlModel' from(select imsi,hier3_id,event_id, TAC from EVENT_E_LTE_CFA_ARRAY_ERAB_ERR_RAW where hier321_id={2.jsonHierThreeTwoOneId} and EVENT_ID = {2.jsonEventID} and EVENT_TIME = '{eventTime}' and QCI_ID={2.jsonQCIId} and IMSI={jsonIMSI} and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) as rawview, DIM_E_SGEH_TAC where rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+   <Validate>jsonIMSI = sqlIMSI,jsonHierThreeId = sqlHierThreeId, jsonTAC=sqlTac,jsonTerminalMake=sqlMake,jsonTerminalModel=sqlModel</Validate>
+   </RepeatValidation>
+</TestCase>
+
+<TestCase id="4">
+   <PreCondition>2.jsonFailures > 0</PreCondition>
+   <PreCondition>2.jsonEventID = 4114</PreCondition><!-- This case verifies the new columns for the new event INTERNAL_PROC_ERAB_RELEASE with event id 4114  -->
+   <Direction>Drill on INTERNAL_PROC_ERAB_RELEASE Failures</Direction><!-- csv export validation for detailed window will be cover under jiraNO:EQEV-26708 -->
+   <Url><![CDATA[NETWORK/LTE_CFA_QOS_DETAILED_EVENT_ANALYSIS/QCI/ECELL?time={time}&display=grid&tzOffset=%2B0530&maxRows=500&HIER321_ID={2.jsonHierThreeTwoOneId}&QCI_ID={2.jsonQCIId}&eventID={2.jsonEventID}]]></Url>
+   <JSONVariables>1:jsonHierThreeId,2:jsonHierThreeTwoOneId,3:eventTime,4:jsonIMSI,5:jsonTAC,6:jsonTerminalMake,7:jsonTerminalModel,19:erabReqCauseGroup,20:erabReqCauseCode,21:erabFailCauseGroup,22:erabFailCauseCode</JSONVariables>
+   <Validate>2.jsonFailures=count{eventTime}</Validate>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[select isnull(CAST(rawview.imsi as varchar),' ') as 'sqlIMSI' ,rawview.hier3_id as 'sqlHierThreeId', isnull(CAST(rawview.tac as varchar),' ') as 'sqlTac', rawview.RELEASE_REQ_3GPP_CAUSE as 'sqlerabReqCauseCode', rawview.RELEASE_FAILURE_3GPP_CAUSE as 'sqlerabFailCauseCode',case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') else ' ' end as 'sqlMake' , case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Invalid') else ' ' end as 'sqlModel' from(select imsi, hier3_id, TAC ,RELEASE_REQ_3GPP_CAUSE,RELEASE_FAILURE_3GPP_CAUSE from EVENT_E_LTE_CFA_ARRAY_ERAB_ERR_RAW where hier321_id={2.jsonHierThreeTwoOneId} and EVENT_ID = {2.jsonEventID} and QCI_ID={2.jsonQCIId} and EVENT_TIME = '{eventTime}' and IMSI={jsonIMSI} and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) as rawview, DIM_E_SGEH_TAC where rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+   <SqlTest><![CDATA[select SETUP_FAIL_3GPP_CAUSE_GROUP_DESC as 'sqlerabReqCauseGroup', RELEASE_REQ_3GPP_CAUSE_GROUP from DIM_E_LTE_CFA_ERAB_SETUP_FAIL_3GPP_CAUSE_GROUP,EVENT_E_LTE_CFA_ARRAY_ERAB_ERR_RAW where EVENT_E_LTE_CFA_ARRAY_ERAB_ERR_RAW.RELEASE_REQ_3GPP_CAUSE_GROUP = DIM_E_LTE_CFA_ERAB_SETUP_FAIL_3GPP_CAUSE_GROUP.SETUP_FAIL_3GPP_CAUSE_GROUP and hier321_id={2.jsonHierThreeTwoOneId} and EVENT_ID = {2.jsonEventID} and QCI_ID={2.jsonQCIId} and EVENT_TIME = '{eventTime}' ]]></SqlTest>
+   <SqlTest><![CDATA[select SETUP_FAIL_3GPP_CAUSE_GROUP_DESC as 'sqlerabFailCauseGroup', RELEASE_FAILURE_3GPP_CAUSE_GROUP from DIM_E_LTE_CFA_ERAB_SETUP_FAIL_3GPP_CAUSE_GROUP ,EVENT_E_LTE_CFA_ARRAY_ERAB_ERR_RAW where EVENT_E_LTE_CFA_ARRAY_ERAB_ERR_RAW.RELEASE_FAILURE_3GPP_CAUSE_GROUP = DIM_E_LTE_CFA_ERAB_SETUP_FAIL_3GPP_CAUSE_GROUP.SETUP_FAIL_3GPP_CAUSE_GROUP and hier321_id={2.jsonHierThreeTwoOneId} and EVENT_ID = {2.jsonEventID} and QCI_ID={2.jsonQCIId} and EVENT_TIME = '{eventTime}']]></SqlTest>
+   <Validate>jsonIMSI = sqlIMSI,jsonHierThreeId = sqlHierThreeId, jsonTAC=sqlTac,jsonTerminalMake=sqlMake,jsonTerminalModel=sqlModel, erabReqCauseGroup=sqlerabReqCauseGroup, erabReqCauseCode=sqlerabReqCauseCode, erabFailCauseGroup=sqlerabFailCauseGroup, erabFailCauseCode=sqlerabFailCauseCode</Validate>
+   </RepeatValidation>
+   <RepeatDrillDown instruction="all">5</RepeatDrillDown>
+   <PassToDrillDown id="5">jsonHierThreeTwoOneId</PassToDrillDown>
+</TestCase>
+
+<TestCase id="5">
+   <Direction>Drill on Access Area</Direction>
+   <Url><![CDATA[NETWORK/LTE_CFA_QOS_SUMMARY_ANALYSIS/ACCESS_AREA?time={time}&display=grid&tzOffset=%2B0530&maxRows=500&HIER321_ID={4.jsonHierThreeTwoOneId}&type=CELL]]></Url>
+   <CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=%2B0530&HIER321_ID={4.jsonHierThreeTwoOneId}&type=CELL&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/LTE_CFA_QOS_SUMMARY_ANALYSIS/ACCESS_AREA&maxRows=0]]></CSVUrl>
+   <IgnoredInCsv>1:jsonHierThreeTwoOneId,4:jsonCatId,8:accessArea,9:accessAreaDesc,10:vendor</IgnoredInCsv>
+   <JSONVariables>1:jsonHierThreeTwoOneId,2:jsonQCIId,3:jsonQCIDesc,4:jsonCatId,5:jsonCatDesc,6:jsonFailures,7:jsonImpactedSubs,8:accessArea,9:accessAreaDesc,10:vendor</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[select count(*) as 'sqlFailures', count(distinct IMSI) as 'sqlimpactedSubscribers' from EVENT_E_LTE_CFA_ARRAY_ERAB_ERR_RAW where HIER321_ID={jsonHierThreeTwoOneId} and QCI_ID={jsonQCIId} and CATEGORY_ID={jsonCatId} and DATETIME_ID >= '2015-03-15 05:00' and DATETIME_ID < '2015-03-16 05:00' and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+   <Validate>jsonFailures=sqlFailures,jsonImpactedSubs=sqlimpactedSubscribers</Validate>
+   </RepeatValidation>
+   <Validate>sort{jsonQCIId}=asc</Validate>
+   <RepeatDrillDown instruction="all">6</RepeatDrillDown>
+   <PassToDrillDown id="6">jsonHierThreeTwoOneId,jsonQCIId,jsonCatId,jsonFailures</PassToDrillDown>
+</TestCase>
+
+<TestCase id="6">
+   <Direction>Drill on Failure Category</Direction>
+   <Url><![CDATA[NETWORK/LTE_CFA_QOS_SUMMARY_ANALYSIS/QCI_EVENT_SUMMARY/ECELL?time={time}&display=grid&tzOffset=%2B0530&maxRows=500&HIER321_ID={5.jsonHierThreeTwoOneId}&QCI_ID={5.jsonQCIId}&CATEGORY_ID={5.jsonCatId}]]></Url>
+   <CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=%2B0530&HIER321_ID={5.jsonHierThreeTwoOneId}&QCI_ID={5.jsonQCIId}&CATEGORY_ID={5.jsonCatId}&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/LTE_CFA_QOS_SUMMARY_ANALYSIS/QCI_EVENT_SUMMARY/ECELL&maxRows=0]]></CSVUrl>
+   <IgnoredInCsv>1:jsonHierThreeTwoOneId,2:jsonQCIId,3:jsonEventID</IgnoredInCsv>
+   <JSONVariables>1:jsonHierThreeTwoOneId,2:jsonQCIId,3:jsonEventID,4:jsonEventDesc,5:jsonFailures,6:jsonImpactedSubs</JSONVariables>
+   <Validate>5.jsonFailures=sum{jsonFailures}</Validate>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[select count(*)as 'sqlFailures',count(distinct IMSI) as 'sqlimpactedSubscribers' from EVENT_E_LTE_CFA_ARRAY_ERAB_ERR_RAW where HIER321_ID = {jsonHierThreeTwoOneId} and QCI_ID = {jsonQCIId} and EVENT_ID={jsonEventID} and DATETIME_ID >= '2015-03-15 05:00' and DATETIME_ID < '2015-03-16 05:00' and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+   <Validate>jsonFailures=sqlFailures,jsonImpactedSubs=sqlimpactedSubscribers</Validate>
+   </RepeatValidation>
+   <RepeatDrillDown instruction="all">7,8</RepeatDrillDown>
+   <PassToDrillDown id="7">jsonHierThreeTwoOneId,jsonQCIId,jsonEventID,jsonFailures</PassToDrillDown>
+   <PassToDrillDown id="8">jsonHierThreeTwoOneId,jsonQCIId,jsonEventID,jsonFailures</PassToDrillDown>
+</TestCase>
+
+<TestCase id="7">
+   <PreCondition>6.jsonFailures > 0</PreCondition>
+   <PreCondition>6.jsonEventID != 4114</PreCondition><!-- The new event INTERNAL_PROC_ERAB_RELEASE with event id 4114 has additional columns -->
+   <Direction>Drill on Failures</Direction><!-- csv export validation for detailed window will be cover under jiraNO:EQEV-26708 -->
+   <Url><![CDATA[NETWORK/LTE_CFA_QOS_DETAILED_EVENT_ANALYSIS/QCI/ECELL?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=%2B0000&maxRows=500&HIER321_ID={6.jsonHierThreeTwoOneId}&QCI_ID={6.jsonQCIId}&eventID={6.jsonEventID}]]></Url>
+   <JSONVariables>1:jsonHierThreeId,2:jsonHierThreeTwoOneId,3:eventTime,4:jsonIMSI,5:jsonTAC,6:jsonTerminalMake,7:jsonTerminalModel</JSONVariables>
+   <Validate>6.jsonFailures=count{eventTime}</Validate>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[select isnull(CAST(rawview.imsi as varchar),' ') as 'sqlIMSI' ,rawview.hier3_id as 'sqlHierThreeId',rawview.event_id as 'sqlEventid', isnull(CAST(rawview.tac as varchar),' ') as 'sqlTac',case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') else ' ' end as 'sqlMake' , case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Invalid') else ' ' end as 'sqlModel' from(select imsi,hier3_id,event_id, TAC from EVENT_E_LTE_CFA_ARRAY_ERAB_ERR_RAW where hier321_id={6.jsonHierThreeTwoOneId} and EVENT_ID = {6.jsonEventID} and EVENT_TIME = '{eventTime}' and QCI_ID={6.jsonQCIId} and IMSI={jsonIMSI} and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) as rawview, DIM_E_SGEH_TAC where rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+   <Validate>jsonIMSI = sqlIMSI,jsonHierThreeId = sqlHierThreeId,jsonTAC=sqlTac,jsonTerminalMake=sqlMake,jsonTerminalModel=sqlModel</Validate>
+   </RepeatValidation>
+</TestCase>
+
+<TestCase id="8">
+   <PreCondition>6.jsonFailures > 0</PreCondition>
+   <PreCondition>6.jsonEventID = 4114</PreCondition><!-- This case verifies the new columns for the new event INTERNAL_PROC_ERAB_RELEASE with event id 4114  -->
+   <Direction>Drill on INTERNAL_PROC_ERAB_RELEASE Failures</Direction><!-- csv export validation for detailed window will be cover under jiraNO:EQEV-26708 -->
+   <Url><![CDATA[NETWORK/LTE_CFA_QOS_DETAILED_EVENT_ANALYSIS/QCI/ECELL?time={time}&display=grid&tzOffset=%2B0530&maxRows=500&HIER321_ID={6.jsonHierThreeTwoOneId}&QCI_ID={6.jsonQCIId}&eventID={6.jsonEventID}]]></Url>
+   <JSONVariables>1:jsonHierThreeId,2:jsonHierThreeTwoOneId,3:eventTime,4:jsonIMSI,5:jsonTAC,6:jsonTerminalMake,7:jsonTerminalModel,19:erabReqCauseGroup,20:erabReqCauseCode,21:erabFailCauseGroup,22:erabFailCauseCode</JSONVariables>
+   <Validate>6.jsonFailures=count{eventTime}</Validate>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[select isnull(CAST(rawview.imsi as varchar),' ') as 'sqlIMSI' ,rawview.hier3_id as 'sqlHierThreeId', isnull(CAST(rawview.tac as varchar),' ') as 'sqlTac', rawview.RELEASE_REQ_3GPP_CAUSE as 'sqlerabReqCauseCode', rawview.RELEASE_FAILURE_3GPP_CAUSE as 'sqlerabFailCauseCode',case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') else ' ' end as 'sqlMake' , case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Invalid') else ' ' end as 'sqlModel' from(select imsi, hier3_id, TAC ,RELEASE_REQ_3GPP_CAUSE,RELEASE_FAILURE_3GPP_CAUSE from EVENT_E_LTE_CFA_ARRAY_ERAB_ERR_RAW where hier321_id={6.jsonHierThreeTwoOneId} and EVENT_ID = {6.jsonEventID} and QCI_ID={6.jsonQCIId} and EVENT_TIME = '{eventTime}' and IMSI={jsonIMSI} and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) as rawview, DIM_E_SGEH_TAC where rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+   <SqlTest><![CDATA[select SETUP_FAIL_3GPP_CAUSE_GROUP_DESC as 'sqlerabReqCauseGroup', RELEASE_REQ_3GPP_CAUSE_GROUP from DIM_E_LTE_CFA_ERAB_SETUP_FAIL_3GPP_CAUSE_GROUP,EVENT_E_LTE_CFA_ARRAY_ERAB_ERR_RAW where EVENT_E_LTE_CFA_ARRAY_ERAB_ERR_RAW.RELEASE_REQ_3GPP_CAUSE_GROUP = DIM_E_LTE_CFA_ERAB_SETUP_FAIL_3GPP_CAUSE_GROUP.SETUP_FAIL_3GPP_CAUSE_GROUP and hier321_id={6.jsonHierThreeTwoOneId} and EVENT_ID = {6.jsonEventID} and QCI_ID={6.jsonQCIId} and EVENT_TIME = '{eventTime}' ]]></SqlTest>
+   <SqlTest><![CDATA[select SETUP_FAIL_3GPP_CAUSE_GROUP_DESC as 'sqlerabFailCauseGroup', RELEASE_FAILURE_3GPP_CAUSE_GROUP from DIM_E_LTE_CFA_ERAB_SETUP_FAIL_3GPP_CAUSE_GROUP ,EVENT_E_LTE_CFA_ARRAY_ERAB_ERR_RAW where EVENT_E_LTE_CFA_ARRAY_ERAB_ERR_RAW.RELEASE_FAILURE_3GPP_CAUSE_GROUP = DIM_E_LTE_CFA_ERAB_SETUP_FAIL_3GPP_CAUSE_GROUP.SETUP_FAIL_3GPP_CAUSE_GROUP and hier321_id={6.jsonHierThreeTwoOneId} and EVENT_ID = {6.jsonEventID} and QCI_ID={6.jsonQCIId} and EVENT_TIME = '{eventTime}']]></SqlTest>
+   <Validate>jsonIMSI = sqlIMSI,jsonHierThreeId = sqlHierThreeId, jsonTAC=sqlTac,jsonTerminalMake=sqlMake,jsonTerminalModel=sqlModel, erabReqCauseGroup=sqlerabReqCauseGroup, erabReqCauseCode=sqlerabReqCauseCode, erabFailCauseGroup=sqlerabFailCauseGroup, erabFailCauseCode=sqlerabFailCauseCode</Validate>
+   </RepeatValidation>
+</TestCase>
+
+</TestSuite>

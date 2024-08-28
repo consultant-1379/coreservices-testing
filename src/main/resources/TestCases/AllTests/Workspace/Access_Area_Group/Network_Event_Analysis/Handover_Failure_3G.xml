@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+   <TestCase id="1">
+   <MaxValidation>4</MaxValidation>
+   <Direction>Launch -> Access Area Group -> Network Event Analysis ->HandOver Failure(3G) </Direction>
+   <Url><![CDATA[NETWORK/WCDMA_HANDOVER_FAILURE_NETWORK_EVENT_ANALYSIS/NODE?dateFrom=16022015&dateTo=17022015&timeFrom=1030&timeTo=1030&type=CELL&groupname={-master-WcdmaAccessAreaGroup}&display=grid&tzOffset=%2B0000&maxRows=30]]></Url>
+   <JSONVariables>1:accessAreaGrp,2:handoverFailuretype,3:categoryId,4:sourceFailure,6:targetFailure</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest instruction="Use:categoryId"><![CDATA[select  count(*) as 'sqlSourceFailures' from EVENT_E_RAN_HFA_SOHO_ERR_RAW as RAW, GROUP_TYPE_E_RAT_VEND_HIER321_CELL as GROUP_TABLE where GROUP_TABLE.GROUP_NAME = '{accessAreaGrp}' and RAW.HIER3_CELL_ID = GROUP_TABLE.HIER3_CELL_ID and  DATETIME_ID >= '2015-02-17 07:00' and DATETIME_ID < '2015-02-17 07:30' and ISNULL(RAW.TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+   <Validate>sourceFailure = sqlSourceFailures</Validate>
+   <SqlTest instruction="Use:categoryId"><![CDATA[select  count(*) as 'sqlTargetFailures' from EVENT_E_RAN_HFA_SOHO_ERR_RAW as RAW, GROUP_TYPE_E_RAT_VEND_HIER321_CELL as GROUP_TABLE where GROUP_TABLE.GROUP_NAME = '{accessAreaGrp}' and RAW.THIER3_CELL_ID = GROUP_TABLE.HIER3_CELL_ID and  DATETIME_ID >= '2015-02-17 07:00' and DATETIME_ID < '2015-02-17 07:30' and ISNULL(RAW.TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+   <Validate>targetFailure = sqlTargetFailures</Validate>
+   </RepeatValidation>
+   <RepeatDrillDown instruction="all">2,3</RepeatDrillDown>
+   <PassToDrillDown id="2">sourceFailure,categoryId,accessAreaGrp</PassToDrillDown>
+   <PassToDrillDown id="3">targetFailure,categoryId,accessAreaGrp</PassToDrillDown>
+   </TestCase>
+
+   <TestCase id="2">
+   <precondition>1.sourceFailure>0</precondition>
+   <Direction>Drill on Source Failures</Direction>
+   <Url><![CDATA[NETWORK/WCDMA_HANDOVER_FAILURE_DETAILED_EVENT_ANALYSIS/NODE?dateFrom=16022015&dateTo=17022015&timeFrom=1030&timeTo=1030&display=grid&tzOffset=%2B0000&maxRows=30&groupname={1.accessAreaGrp}&categoryId={1.categoryId}&type=CELL]]></Url>
+   <JSONVariables>1:eventTime</JSONVariables>
+   <Validate>1.sourceFailure = count{eventTime}</Validate>
+    </TestCase>
+
+   <TestCase id="3">
+   <precondition>1.targetFailure>0</precondition>
+   <Direction>Drill on Target Failures</Direction>
+   <Url><![CDATA[NETWORK/WCDMA_HANDOVER_FAILURE_DETAILED_EVENT_ANALYSIS/NODE?dateFrom=16022015&dateTo=17022015&timeFrom=1030&timeTo=1030&display=grid&tzOffset=%2B0000&maxRows=30&groupname={1.accessAreaGrp}&categoryId={1.categoryId}&type=CELL&cellType=TARGET]]></Url>
+   <JSONVariables>1:eventTime</JSONVariables>
+   <Validate>1.targetFailure = count{eventTime}</Validate>
+   </TestCase>
+
+   </TestSuite>

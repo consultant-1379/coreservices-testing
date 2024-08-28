@@ -1,0 +1,1 @@
+tac=select top 1 tac from event_e_lte_err_raw where tac != 0

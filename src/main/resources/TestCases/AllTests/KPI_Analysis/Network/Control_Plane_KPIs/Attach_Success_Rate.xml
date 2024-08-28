@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<TestCase id="1">
+   <Direction>Launch -> Network -> Attach Success Rate -> Map</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/CORE/KPI_MAP?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&tzOffset=+0100]]></Url>
+   <JSONVariables>rncId:rncId,kpis.Attach Success Rate:AttachUpdateSR</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(5,2)) AS 'sqlAttachUpdateSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' AND rat = 1 AND hierarchy_3 <> 'Unknown' AND EVENT_ID = 0 AND hierarchy_3 in (select ALTERNATIVE_FDN from DIM_E_RAN_RNC where RNC_FDN in (select SN from DIM_E_RAN_RNCFUNCTION where rncid={rncId})) AND
+   ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(sum(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_SGEH_VEND_HIER321_EVENTID_SUC_15MIN WHERE DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' AND rat = 1 AND hierarchy_3 <> 'Unknown' AND EVENT_ID = 0 AND hierarchy_3 in (select ALTERNATIVE_FDN from DIM_E_RAN_RNC where RNC_FDN in (select SN from DIM_E_RAN_RNCFUNCTION where rncid={rncId})) ) AS suc]]></SqlTest>
+   <Validate>AttachUpdateSR = sqlAttachUpdateSR</Validate>
+   </RepeatValidation>
+   <RepeatDrillDown instruction="all">2</RepeatDrillDown>
+</TestCase>
+
+<TestCase id="2">
+   <Direction>Chart</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/CORE/KPI_CHART?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&tzOffset=+0100]]></Url>
+   <JSONVariables>kpiTime:kpiTimeInMilliseconds,kpiTime:kpiTime,Attach Success Rate:AttachUpdateSR</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(5,2)) AS 'sqlAttachUpdateSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {kpiTime} AND rat = 1 AND hierarchy_3 <> 'Unknown' AND EVENT_ID = 0 AND
+   ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err, (SELECT ISNULL(sum(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_SGEH_VEND_HIER321_EVENTID_SUC_15MIN WHERE {kpiTime} AND rat = 1 AND hierarchy_3 <> 'Unknown' AND EVENT_ID = 0 ) AS suc]]></SqlTest>
+   <Validate>AttachUpdateSR = sqlAttachUpdateSR</Validate>
+   </RepeatValidation>
+   <RepeatDrillDown instruction="all">3,4,5</RepeatDrillDown>
+   <PassToDrillDown id="3">kpiTimeInMilliseconds,kpiTime,AttachUpdateSR</PassToDrillDown>
+   <PassToDrillDown id="4">kpiTimeInMilliseconds,kpiTime,AttachUpdateSR</PassToDrillDown>
+   <PassToDrillDown id="5">kpiTimeInMilliseconds,kpiTime,AttachUpdateSR</PassToDrillDown>
+   <Validate>sort{kpiTimeInMilliseconds} = asc</Validate>
+</TestCase>
+
+<TestCase id="3">
+   <PreCondition><![CDATA[2.AttachUpdateSR > 0]]></PreCondition>
+   <Direction>Chart By Options -> TAC</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/CORE/KPI_CHART/KPI_DRILL?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&kpiStartTime={2.kpiTimeInMilliseconds}&tzOffset=+0100&drilltype=TAC&kpiId=6]]></Url>
+   <JSONVariables>Value:AttachUpdateSR,DrillBy:tac</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest success_raw="false"><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(5,2)) AS 'sqlAttachUpdateSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {2.kpiTime} AND rat = 1 AND TAC = {tac} AND EVENT_ID = 0 AND HIERARCHY_3 <> 'Unknown' AND
+   ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') )    AS err, (SELECT ISNULL(sum(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_SGEH_IMSI_SUC_RAW WHERE {2.kpiTime} AND TAC = {tac} AND rat = 1 AND EVENT_ID = 0 AND HIER3_ID IN (SELECT HIER3_ID FROM DIM_E_SGEH_HIER321) AND ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) AS suc]]></SqlTest>
+   <SqlTest success_raw="true"><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(5,2)) AS 'sqlAttachUpdateSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {2.kpiTime} AND rat = 1 AND TAC = {tac} AND EVENT_ID = 0 AND HIERARCHY_3 <> 'Unknown' AND
+   ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') )    AS err, (SELECT count(*) AS SUC_COUNT FROM EVENT_E_SGEH_SUC_RAW WHERE {2.kpiTime} AND TAC = {tac} AND RAT = 1 AND EVENT_ID = 0 AND HIERARCHY_3 IN (SELECT HIERARCHY_3 FROM DIM_E_SGEH_HIER321) AND ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) AS suc]]></SqlTest>
+   <Validate>AttachUpdateSR = sqlAttachUpdateSR</Validate>
+   </RepeatValidation>
+</TestCase>
+
+<TestCase id="4">
+   <PreCondition><![CDATA[2.AttachUpdateSR > 0]]></PreCondition>
+   <Direction>Chart By Options -> Make</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/CORE/KPI_CHART/KPI_DRILL?time={time}&kpiStartTime={2.kpiTimeInMilliseconds}&tzOffset=+0000&drilltype=MANUFACTURER&kpiId=6]]></Url>
+   <JSONVariables>Value:AttachUpdateSR,DrillBy:manufacturer</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest success_raw="false"><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(5,2)) AS 'sqlAttachUpdateSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {2.kpiTime} AND rat = 1 AND TAC in (select TAC from DIM_E_SGEH_TAC where MANUFACTURER='{manufacturer}') AND EVENT_ID = 0 AND HIERARCHY_3 <> 'Unknown' AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err,
+   (SELECT ISNULL(sum(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_SGEH_IMSI_SUC_RAW WHERE {2.kpiTime} AND rat = 1 AND TAC in (select TAC from DIM_E_SGEH_TAC where MANUFACTURER='{manufacturer}') AND EVENT_ID = 0 AND HIER3_ID IN (SELECT HIER3_ID FROM DIM_E_SGEH_HIER321) AND ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) AS suc]]></SqlTest>
+   <SqlTest success_raw="true"><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(5,2)) AS 'sqlAttachUpdateSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {2.kpiTime} AND rat = 1 AND TAC in (select TAC from DIM_E_SGEH_TAC where MANUFACTURER='{manufacturer}') AND EVENT_ID = 0 AND HIERARCHY_3 <> 'Unknown' AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err,
+   (SELECT count(*) AS SUC_COUNT FROM EVENT_E_SGEH_SUC_RAW WHERE {2.kpiTime} AND RAT=1 AND TAC in (select TAC from DIM_E_SGEH_TAC where MANUFACTURER='{manufacturer}') AND EVENT_ID = 0 AND HIERARCHY_3 IN (SELECT HIERARCHY_3 FROM DIM_E_SGEH_HIER321) AND ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) AS suc]]></SqlTest>
+   <Validate>AttachUpdateSR = sqlAttachUpdateSR</Validate>
+   </RepeatValidation>
+</TestCase>
+
+<TestCase id="5">
+   <PreCondition><![CDATA[2.AttachUpdateSR > 0]]></PreCondition>
+   <Direction>Chart By Options -> Make-Model</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/CORE/KPI_CHART/KPI_DRILL?time={time}&kpiStartTime={2.kpiTimeInMilliseconds}&tzOffset=+0000&drilltype=MAKE_MODEL&kpiId=6]]></Url>
+   <JSONVariables>Value:AttachUpdateSR,DrillBy:manufacturerModel</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest success_raw="false"><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(5,2)) AS 'sqlAttachUpdateSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {2.kpiTime} AND rat = 1 AND TAC in (select tac from (select tac, manufacturer || '-' || model as ManuModel from dim_e_sgeh_tac where ManuModel='{manufacturerModel}') AS temp1) AND EVENT_ID = 0 AND HIERARCHY_3 <> 'Unknown' AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err,
+   (SELECT ISNULL(sum(NO_OF_SUCCESSES),0) AS SUC_COUNT FROM EVENT_E_SGEH_IMSI_SUC_RAW WHERE {2.kpiTime} AND rat = 1 AND TAC in (select tac from (select tac, manufacturer || '-' || model as ManuModel from dim_e_sgeh_tac where ManuModel='{manufacturerModel}')AS temp2) AND EVENT_ID = 0 AND HIER3_ID IN (SELECT HIER3_ID FROM DIM_E_SGEH_HIER321) AND ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) AS suc]]></SqlTest>
+   <SqlTest success_raw="true"><![CDATA[SELECT CAST(ROUND(100 *(CAST(SUC_COUNT AS DECIMAL(16))/(ERR_COUNT + SUC_COUNT)),2) AS NUMERIC(5,2)) AS 'sqlAttachUpdateSR' FROM ( SELECT ISNULL(COUNT(*),0) AS ERR_COUNT FROM Event_E_sgeh_err_raw WHERE {2.kpiTime} AND rat = 1 AND TAC in (select tac from (select tac, manufacturer || '-' || model as ManuModel from dim_e_sgeh_tac where ManuModel='{manufacturerModel}') AS temp1) AND EVENT_ID = 0 AND HIERARCHY_3 <> 'Unknown' AND ISNULL(TAC,-1) NOT IN( SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') ) AS err,
+   (SELECT count(*) AS SUC_COUNT FROM EVENT_E_SGEH_SUC_RAW WHERE {2.kpiTime} AND RAT = 1 AND TAC in (select tac from (select tac, manufacturer || '-' || model as ManuModel from dim_e_sgeh_tac where ManuModel='{manufacturerModel}')AS temp2) AND EVENT_ID = 0 AND HIERARCHY_3 IN (SELECT HIERARCHY_3 FROM DIM_E_SGEH_HIER321) AND ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) AS suc]]></SqlTest>
+   <Validate>AttachUpdateSR = sqlAttachUpdateSR</Validate>
+   </RepeatValidation>
+</TestCase>
+
+</TestSuite>

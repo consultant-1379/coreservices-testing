@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TestSuite>
+    <TestCase id="1">
+        <Direction>Launch -> 4G Radio Network -> 4G Ranking -> Handover Execution By Source Cell</Direction>
+        <Url><![CDATA[NETWORK/LTE_HANDOVER_FAILURE_RANKING_ANALYSIS/SOURCECELL_EXEC?time={time}&display=grid&tzOffset=%2B0530&maxRows=50]]></Url>
+        <JSONVariables>1:hierThreeTwoOneId,2:categoryId,3:rank,4:ranVendor,5:controller,6:srcAccessArea,7:failures,8:ratDesc</JSONVariables>
+        <RepeatValidation instruction="all">
+        <SqlTest><![CDATA[select count (*) as 'sqlFailures' from dc.EVENT_E_LTE_HFA_ERR_RAW where CATEGORY_ID_2 = {categoryId} and HIER321_ID = {hierThreeTwoOneId} and DATETIME_ID >= '2015-02-09 09:01' and DATETIME_ID < '2015-02-09 09:31' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+        <Validate>failures = sqlFailures</Validate>
+        <Validate><![CDATA[ rank < 50 ]]></Validate>
+        </RepeatValidation>
+        <Validate>sort{failures} = desc</Validate>
+        <RepeatDrillDown instruction="all">2</RepeatDrillDown>
+        <PassToDrillDown id="2">hierThreeTwoOneId,categoryId</PassToDrillDown>
+    </TestCase>
+
+    <TestCase id="2">
+        <Precondition>1.hierThreeTwoOneId > 0</Precondition>
+        <Direction>Drill On Source Access Area</Direction>
+        <Url><![CDATA[NETWORK/LTE_HANDOVER_FAILURE_SUBSCRIBER_EVENT_SUMMARY_ANALYSIS/NODE?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&HIER321_ID={1.hierThreeTwoOneId}&type=CELL&display=grid&tzOffset=%2B0530&maxRows=500]]></Url>
+        <JSONVariables>1:hierThreeTwoOneId,2:ranVendor,3:controller,4:srcAccessArea,5:handoverStage,6:categoryId,7:failures,8:impactedSubs</JSONVariables>
+
+        <RepeatValidation instruction="all">
+         <SqlTest><![CDATA[select count (*) as 'sqlFailures' from dc.EVENT_E_LTE_HFA_ERR_RAW where hier321_id={hierThreeTwoOneId} and CATEGORY_ID_2 = {categoryId} and DATETIME_ID >= '2015-02-02 09:01' and DATETIME_ID < '2015-02-02 09:31' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+        <Validate>failures = sqlFailures</Validate>
+        <SqlTest><![CDATA[select count (distinct IMSI) as 'sqlImpactedSubs' from dc.EVENT_E_LTE_HFA_ERR_RAW where hier321_id={hierThreeTwoOneId} and CATEGORY_ID_2 = {categoryId} and DATETIME_ID >= '2015-02-02 09:01' and DATETIME_ID < '2015-02-02 09:31' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+        <Validate>impactedSubs = sqlImpactedSubs</Validate>
+        </RepeatValidation>
+        <Validate>sort{failures} = desc</Validate>
+        <RepeatDrillDown instruction="all">3</RepeatDrillDown>
+        <PassToDrillDown id="3">hierThreeTwoOneId,categoryId</PassToDrillDown>
+    </TestCase>
+
+     <TestCase id="3">
+        <Precondition>2.hierThreeTwoOneId > 0</Precondition>
+        <Direction>Drill On Handover Stage</Direction>
+        <Url><![CDATA[NETWORK/LTE_HANDOVER_FAILURE_SUBSCRIBER_EVENT_SUMMARY_ANALYSIS/EVENT_ID?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=%2B0530&maxRows=500&HIER321_ID={2.hierThreeTwoOneId}&CATEGORY_ID_2={2.categoryId}]]></Url>
+        <JSONVariables>1:hierThreeTwoOneId,2:ranVendor,3:controller,4:srcAccessArea,5:eventType,6:eventId,7:failures,8:impactedSubs</JSONVariables>
+        <RepeatValidation instruction="all">
+        <SqlTest><![CDATA[select count (*) as 'sqlFailures' from dc.EVENT_E_LTE_HFA_ERR_RAW where hier321_id= {2.hierThreeTwoOneId} and category_id_2 = {2.categoryId} and EVENT_ID = {eventId} and DATETIME_ID >= '2015-02-02 09:01' and DATETIME_ID < '2015-02-02 09:31' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+        <Validate>failures = sqlFailures</Validate>
+        <SqlTest><![CDATA[select count (distinct IMSI) as 'sqlImpactedSubs' from dc.EVENT_E_LTE_HFA_ERR_RAW where hier321_id= {2.hierThreeTwoOneId} and category_id_2 = {2.categoryId} and EVENT_ID = {eventId} and DATETIME_ID >= '2015-02-02 09:01' and DATETIME_ID < '2015-02-02 09:31' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+        <Validate>impactedSubs = sqlImpactedSubs</Validate>
+        </RepeatValidation>
+        <Validate>sort{failures} = desc</Validate>
+        <RepeatDrillDown instruction="all">4,6,8,10</RepeatDrillDown>
+        <PassToDrillDown id="4">hierThreeTwoOneId,eventId,failures</PassToDrillDown>
+         <PassToDrillDown id="6">hierThreeTwoOneId,eventId,failures</PassToDrillDown>
+        <PassToDrillDown id="8">hierThreeTwoOneId,eventId,failures</PassToDrillDown>
+        <PassToDrillDown id="10">hierThreeTwoOneId,eventId,failures</PassToDrillDown>
+    </TestCase>
+
+   <TestCase id="4">
+   <Precondition>3.eventId = 4102</Precondition>
+        <Direction>Drill On Failures INTERNAL_PROC_HO_PREP_S1_OUT</Direction>
+        <Url><![CDATA[NETWORK/LTE_HANDOVER_FAILURE_SUBSCRIBER_DETAILED_EVENT_ANALYSIS/ACCESS_AREA?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=%2B0530&maxRows=500&HIER321_ID={3.hierThreeTwoOneId}&EVENT_ID={3.eventId}]]></Url>
+        <JSONVariables>1:hierThreeId,2:hierThreeTwoOneId,3:thierThreeTwoOneId,4:thier321ID,5:eventTime,6:evTime,7:IMSI,8:TAC,9:jsonMake,10:jsonModel,11:eventId,12:eventType,13:failureReason,29:noOfErabs</JSONVariables>
+        <RepeatValidation instruction="all">
+            <SqlTest><![CDATA[select isnull(CAST(imsi as varchar),' ') as 'sqlIMSI', HIER321_ID as 'sqlhierThreeTwoOneId', TAC as 'sqlTAC' from event_e_lte_hfa_err_raw where DATETIME_ID >= '2015-01-28 00:00' and DATETIME_ID < '2015-02-04 00:00' and EVENT_TIME = '{eventTime}' and EVENT_ID = {3.eventId} and hier321_id = {3.hierThreeTwoOneId} and imsi={IMSI} and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+            <Validate>IMSI = sqlIMSI,hierThreeTwoOneId = sqlhierThreeTwoOneId,TAC = sqlTAC</Validate>
+            <SqlTest><![CDATA[SELECT case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0 ) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') when (rawview.TAC = 0) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') else ' ' end AS 'sqlTerminalMake', case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0 ) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Unknown') when (rawview.TAC = 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Invalid') else ' ' end AS 'sqlTerminalModel' FROM(select distinct TAC from EVENT_E_LTE_HFA_ERR_RAW where DATETIME_ID >= '2015-02-24 05:00' and DATETIME_ID < '2015-02-25 05:00' and EVENT_TIME = '{eventTime}' and EVENT_ID = {3.eventId} and hier321_id = {3.hierThreeTwoOneId} and imsi={IMSI} and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) as rawview,DIM_E_SGEH_TAC WHERE rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+            <Validate>jsonMake=sqlTerminalMake, jsonModel=sqlTerminalModel</Validate>
+        </RepeatValidation>
+            <Validate>3.failures = count{eventTime}</Validate>
+            <RepeatDrillDown instruction="all">5</RepeatDrillDown>
+            <PassToDrillDown id="5">hierThreeId,hierThreeTwoOneId,evTime,eventTime,IMSI,TAC,eventId,noOfErabs</PassToDrillDown>
+    </TestCase>
+
+     <TestCase id="5">
+    <Precondition>4.noOfErabs > 0</Precondition>
+        <Direction>Drill On Number Of ERABs</Direction>
+        <Url><![CDATA[SUBSCRIBER/LTE_HANDOVER_FAILURE_SUBSCRIBER_ERAB_DRILLDOWN/IMSI?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=%2B0530&maxRows=500&HIER3_ID={4.hierThreeId}&HIER321_ID={4.hierThreeTwoOneId}&EVENT_TIME={4.evTime}&imsi={4.IMSI}&TAC={4.TAC}&eventID={4.eventId}]]></Url>
+        <JSONVariables>1:evTime,2:IMSI,3:TAC</JSONVariables>
+        <Validate>4.noOfErabs = count{evTime}</Validate>
+        <RepeatValidation instruction="all">
+        <SqlTest><![CDATA[select isnull(CAST(imsi as varchar),' ') as 'sqlIMSI', TAC as 'sqlTAC' from EVENT_E_LTE_HFA_ARRAY_ERAB_ERR_RAW where DATETIME_ID >= '2015-01-28 00:00' and DATETIME_ID < '2015-02-04 00:00' and EVENT_ID = {4.eventId} and hier321_id = {4.hierThreeTwoOneId} and HIER3_ID = {4.hierThreeId} and EVENT_TIME = '{4.eventTime}' and imsi={4.IMSI} and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+        <Validate>IMSI = sqlIMSI,TAC = sqlTAC</Validate>
+        </RepeatValidation>
+    </TestCase>
+
+   <TestCase id="6">
+   <Precondition>3.eventId = 4105</Precondition>
+        <Direction>Drill On Failures INTERNAL_PROC_HO_EXEC_S1_IN</Direction>
+        <Url><![CDATA[NETWORK/LTE_HANDOVER_FAILURE_SUBSCRIBER_DETAILED_EVENT_ANALYSIS/ACCESS_AREA?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=%2B0530&maxRows=500&HIER321_ID={3.hierThreeTwoOneId}&EVENT_ID={3.eventId}]]></Url>
+        <JSONVariables>1:hierThreeId,2:hierThreeTwoOneId,3:thierThreeTwoOneId,4:thier321ID,5:eventTime,6:evTime,7:IMSI,8:TAC,9:jsonMake,10:jsonModel,11:eventId,12:eventType,13:failureReason,25:noOfErabs</JSONVariables>
+        <RepeatValidation instruction="all">
+        <SqlTest><![CDATA[select isnull(CAST(imsi as varchar),' ') as 'sqlIMSI', HIER321_ID as 'sqlhierThreeTwoOneId', TAC as 'sqlTAC' from event_e_lte_hfa_err_raw where DATETIME_ID >= '2015-01-28 00:00' and DATETIME_ID < '2015-02-04 00:00' and EVENT_TIME = '{eventTime}' and EVENT_ID = {3.eventId} and hier321_id = {3.hierThreeTwoOneId} and imsi={IMSI} and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+        <Validate>IMSI = sqlIMSI,hierThreeTwoOneId = sqlhierThreeTwoOneId,TAC = sqlTAC</Validate>
+        <SqlTest><![CDATA[SELECT case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0 ) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') when (rawview.TAC = 0) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') else ' ' end AS 'sqlTerminalMake', case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0 ) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Unknown') when (rawview.TAC = 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Invalid') else ' ' end AS 'sqlTerminalModel' FROM(select distinct TAC from EVENT_E_LTE_HFA_ERR_RAW where DATETIME_ID >= '2015-02-24 05:00' and DATETIME_ID < '2015-02-25 05:00' and EVENT_TIME = '{eventTime}' and EVENT_ID = {3.eventId} and hier321_id = {3.hierThreeTwoOneId} and imsi={IMSI} and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) as rawview,DIM_E_SGEH_TAC WHERE rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+        <Validate>jsonMake=sqlTerminalMake, jsonModel=sqlTerminalModel</Validate>
+        </RepeatValidation>
+        <Validate>3.failures = count{eventTime}</Validate>
+        <RepeatDrillDown instruction="all">7</RepeatDrillDown>
+        <PassToDrillDown id="7">hierThreeId,hierThreeTwoOneId,evTime,eventTime,IMSI,TAC,eventId,noOfErabs</PassToDrillDown>
+    </TestCase>
+
+       <TestCase id="7">
+    <Precondition>6.noOfErabs > 0</Precondition>
+        <Direction>Drill On Number Of ERABs</Direction>
+        <Url><![CDATA[SUBSCRIBER/LTE_HANDOVER_FAILURE_SUBSCRIBER_ERAB_DRILLDOWN/IMSI?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=%2B0530&maxRows=500&HIER3_ID={6.hierThreeId}&HIER321_ID={6.hierThreeTwoOneId}&EVENT_TIME={6.evTime}&imsi={6.IMSI}&TAC={6.TAC}&eventID={6.eventId}]]></Url>
+        <JSONVariables>1:evTime,2:IMSI,3:TAC</JSONVariables>
+        <Validate>6.noOfErabs = count{evTime}</Validate>
+        <RepeatValidation instruction="all">
+        <SqlTest><![CDATA[select isnull(CAST(imsi as varchar),' ') as 'sqlIMSI', TAC as 'sqlTAC' from EVENT_E_LTE_HFA_ARRAY_ERAB_ERR_RAW where DATETIME_ID >= '2015-01-28 00:00' and DATETIME_ID < '2015-02-04 00:00' and EVENT_ID = {6.eventId} and hier321_id = {6.hierThreeTwoOneId} and HIER3_ID = {6.hierThreeId} and EVENT_TIME = '{6.eventTime}' and imsi={6.IMSI} and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+        <Validate>IMSI = sqlIMSI,TAC = sqlTAC</Validate>
+        </RepeatValidation>
+    </TestCase>
+
+    <TestCase id="8">
+   <Precondition>3.eventId = 4113</Precondition>
+        <Direction>Drill On Failures INTERNAL_PROC_HO_EXEC_X2_IN</Direction>
+        <Url><![CDATA[NETWORK/LTE_HANDOVER_FAILURE_SUBSCRIBER_DETAILED_EVENT_ANALYSIS/ACCESS_AREA?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=%2B0530&maxRows=500&HIER321_ID={3.hierThreeTwoOneId}&EVENT_ID={3.eventId}]]></Url>
+        <JSONVariables>1:hierThreeId,2:hierThreeTwoOneId,3:thierThreeTwoOneId,4:thier321ID,5:eventTime,6:evTime,7:IMSI,8:TAC,9:jsonMake,10:jsonModel,11:eventId,12:eventType,13:failureReason,26:noOfErabs</JSONVariables>
+        <RepeatValidation instruction="all">
+            <SqlTest><![CDATA[select isnull(CAST(imsi as varchar),' ') as 'sqlIMSI', HIER321_ID as 'sqlhierThreeTwoOneId', TAC as 'sqlTAC' from event_e_lte_hfa_err_raw where DATETIME_ID >= '2015-01-28 00:00' and DATETIME_ID < '2015-02-04 00:00' and EVENT_TIME = '{eventTime}' and EVENT_ID = {3.eventId} and hier321_id = {3.hierThreeTwoOneId} and imsi={IMSI} and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+            <Validate>IMSI = sqlIMSI,hierThreeTwoOneId = sqlhierThreeTwoOneId,TAC = sqlTAC</Validate>
+            <SqlTest><![CDATA[SELECT case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0 ) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') when (rawview.TAC = 0) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') else ' ' end AS 'sqlTerminalMake', case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0 ) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Unknown') when (rawview.TAC = 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Invalid') else ' ' end AS 'sqlTerminalModel' FROM(select distinct TAC from EVENT_E_LTE_HFA_ERR_RAW where DATETIME_ID >= '2015-02-24 05:00' and DATETIME_ID < '2015-02-25 05:00' and EVENT_TIME = '{eventTime}' and EVENT_ID = {3.eventId} and hier321_id = {3.hierThreeTwoOneId} and imsi={IMSI} and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) as rawview,DIM_E_SGEH_TAC WHERE rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+            <Validate>jsonMake=sqlTerminalMake, jsonModel=sqlTerminalModel</Validate>
+        </RepeatValidation>
+            <Validate>3.failures = count{eventTime}</Validate>
+            <RepeatDrillDown instruction="all">9</RepeatDrillDown>
+            <PassToDrillDown id="9">hierThreeId,hierThreeTwoOneId,evTime,eventTime,IMSI,TAC,eventId,noOfErabs</PassToDrillDown>
+    </TestCase>
+
+    <TestCase id="9">
+    <Precondition>8.noOfErabs > 0</Precondition>
+        <Direction>Drill On Number Of ERABs</Direction>
+        <Url><![CDATA[SUBSCRIBER/LTE_HANDOVER_FAILURE_SUBSCRIBER_ERAB_DRILLDOWN/IMSI?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=%2B0530&maxRows=500&HIER3_ID={8.hierThreeId}&HIER321_ID={8.hierThreeTwoOneId}&EVENT_TIME={8.evTime}&imsi={8.IMSI}&TAC={8.TAC}&eventID={8.eventId}]]></Url>
+        <JSONVariables>1:evTime,2:IMSI,3:TAC</JSONVariables>
+       <Validate>8.noOfErabs = count{evTime}</Validate>
+        <RepeatValidation instruction="all">
+            <SqlTest><![CDATA[select isnull(CAST(imsi as varchar),' ') as 'sqlIMSI', TAC as 'sqlTAC' from EVENT_E_LTE_HFA_ARRAY_ERAB_ERR_RAW where DATETIME_ID >= '2015-01-28 00:00' and DATETIME_ID < '2015-02-04 00:00' and EVENT_ID = {8.eventId} and hier321_id = {8.hierThreeTwoOneId} and HIER3_ID = {8.hierThreeId} and EVENT_TIME = '{8.eventTime}' and imsi={8.IMSI} and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+            <Validate>IMSI = sqlIMSI,TAC = sqlTAC</Validate>
+        </RepeatValidation>
+    </TestCase>
+
+    <TestCase id="10">
+   <Precondition>3.eventId = 4104</Precondition>
+        <Direction>Drill On Failures INTERNAL_PROC_HO_EXEC_S1_OUT</Direction>
+        <Url><![CDATA[NETWORK/LTE_HANDOVER_FAILURE_SUBSCRIBER_DETAILED_EVENT_ANALYSIS/ACCESS_AREA?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=%2B0530&maxRows=500&HIER321_ID={3.hierThreeTwoOneId}&EVENT_ID={3.eventId}]]></Url>
+        <JSONVariables>1:hierThreeId,2:hierThreeTwoOneId,3:thierThreeTwoOneId,4:thier321ID,5:eventTime,6:evTime,7:IMSI,8:TAC,9:jsonMake,10:jsonModel,11:eventId,12:eventType,13:failureReason,27:noOfErabs</JSONVariables>
+        <RepeatValidation instruction="all">
+            <SqlTest><![CDATA[select isnull(CAST(imsi as varchar),' ') as 'sqlIMSI', HIER321_ID as 'sqlhierThreeTwoOneId', TAC as 'sqlTAC' from event_e_lte_hfa_err_raw where DATETIME_ID >= '2015-01-28 00:00' and DATETIME_ID < '2015-02-04 00:00' and EVENT_TIME = '{eventTime}' and EVENT_ID = {3.eventId} and hier321_id = {3.hierThreeTwoOneId} and imsi={IMSI} and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+            <Validate>IMSI = sqlIMSI,hierThreeTwoOneId = sqlhierThreeTwoOneId,TAC = sqlTAC</Validate>
+            <SqlTest><![CDATA[SELECT case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0 ) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') when (rawview.TAC = 0) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') else ' ' end AS 'sqlTerminalMake', case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0 ) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Unknown') when (rawview.TAC = 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Invalid') else ' ' end AS 'sqlTerminalModel' FROM(select distinct TAC from EVENT_E_LTE_HFA_ERR_RAW where DATETIME_ID >= '2015-02-24 05:00' and DATETIME_ID < '2015-02-25 05:00' and EVENT_TIME = '{eventTime}' and EVENT_ID = {3.eventId} and hier321_id = {3.hierThreeTwoOneId} and imsi={IMSI} and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) as rawview,DIM_E_SGEH_TAC WHERE rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+            <Validate>jsonMake=sqlTerminalMake, jsonModel=sqlTerminalModel</Validate>
+        </RepeatValidation>
+            <Validate>3.failures = count{eventTime}</Validate>
+            <RepeatDrillDown instruction="all">11</RepeatDrillDown>
+            <PassToDrillDown id="11">hierThreeId,hierThreeTwoOneId,evTime,eventTime,IMSI,TAC,eventId,noOfErabs</PassToDrillDown>
+    </TestCase>
+
+    <TestCase id="11">
+    <Precondition>10.noOfErabs > 0</Precondition>
+        <Direction>Drill On Number Of ERABs</Direction>
+        <Url><![CDATA[SUBSCRIBER/LTE_HANDOVER_FAILURE_SUBSCRIBER_ERAB_DRILLDOWN/IMSI?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=%2B0530&maxRows=500&HIER3_ID={10.hierThreeId}&HIER321_ID={10.hierThreeTwoOneId}&EVENT_TIME={10.evTime}&imsi={10.IMSI}&TAC={10.TAC}&eventID={10.eventId}]]></Url>
+        <JSONVariables>1:evTime,2:IMSI,3:TAC</JSONVariables>
+        <Validate>10.noOfErabs = count{evTime}</Validate>
+        <RepeatValidation instruction="all">
+            <SqlTest><![CDATA[select count (*) as 'sqlTotalRows' from EVENT_E_LTE_HFA_ARRAY_ERAB_ERR_RAW where DATETIME_ID >= '2015-01-28 00:00' and DATETIME_ID < '2015-02-04 00:00' and IMSI = {10.IMSI} and TAC = {10.TAC} and EVENT_ID = {10.eventId} and hier321_id = {10.hierThreeTwoOneId} and HIER3_ID = {10.hierThreeId} and EVENT_TIME = '{10.eventTime}' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+            <Validate>10.noOfErabs = sqlTotalRows</Validate>
+            <SqlTest><![CDATA[select isnull(CAST(imsi as varchar),' ') as 'sqlIMSI', TAC as 'sqlTAC' from EVENT_E_LTE_HFA_ARRAY_ERAB_ERR_RAW where DATETIME_ID >= '2015-01-28 00:00' and DATETIME_ID < '2015-02-04 00:00' and EVENT_ID = {10.eventId} and hier321_id = {10.hierThreeTwoOneId} and HIER3_ID = {10.hierThreeId} and EVENT_TIME = '{10.eventTime}' ans imsi={10.IMSI} and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+            <Validate>IMSI = sqlIMSI,TAC = sqlTAC</Validate>
+        </RepeatValidation>
+    </TestCase>
+</TestSuite>

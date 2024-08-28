@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+<TestCase id="1">
+<Direction>Launch -> Terminal -> Enter Terminal Make -> Enter Terminal Model -> 4G Terminal Event Analysis -> HandOver Failure </Direction>
+<Url><![CDATA[TERMINAL/LTE_HFA_EVENT_SUMMARY/TAC?time={time}&type=TAC&node={-master-LTEHFATerminalNode}&display=grid&tzOffset=%2B0530&maxRows=500]]></Url>
+<JSONVariables>1:categoryId,2:TAC,3:terminalMake,4:terminalModel,5:handoverStage,6:failures,7:impactdSubs</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count (*) as 'sqlFailures' from dc.EVENT_E_LTE_HFA_ERR_RAW where CATEGORY_ID_2 = {categoryId} and TAC = {TAC} and DATETIME_ID >= '2015-02-02 09:01' and DATETIME_ID < '2015-02-02 09:31' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+<SqlTest><![CDATA[select count (distinct imsi) as 'sqlimpactdSubs' from dc.EVENT_E_LTE_HFA_ERR_RAW where CATEGORY_ID_2 = {categoryId} and TAC = {TAC} and DATETIME_ID >= '2015-02-02 09:01' and DATETIME_ID < '2015-02-02 09:31' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>impactdSubs = sqlimpactdSubs</Validate>
+</RepeatValidation>
+<Validate>sort{failures} = desc</Validate>
+<RepeatDrillDown instruction="all">2</RepeatDrillDown>
+<PassToDrillDown id="2">TAC,categoryId</PassToDrillDown>
+</TestCase>
+
+<TestCase id="2">
+<Direction>Drill On HandOver stage</Direction>
+<Url><![CDATA[TERMINAL/LTE_HFA_EVENT_SUMMARY/CATEGORISED_TERMINAL?time={time}&display=grid&tzOffset=%2B0530&maxRows=500&CATEGORY_ID_2={1.categoryId}&tac={1.TAC}]]></Url>
+<JSONVariables>1:TAC,2:terminalMake,3:terminalModel,4:eventType,5:eventId,6:failures,7:impactdSubs</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count (*) as 'sqlFailures' from dc.EVENT_E_LTE_HFA_ERR_RAW where tac= {1.TAC} and category_id_2 = {1.categoryId} and EVENT_ID={eventId} and DATETIME_ID >= '2015-02-02 09:01' and DATETIME_ID < '2015-02-02 09:31' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+<SqlTest><![CDATA[select count (distinct imsi) as 'sqlimpactdSubs' from dc.EVENT_E_LTE_HFA_ERR_RAW where tac= {1.TAC} and category_id_2 = {1.categoryId} and EVENT_ID={eventId} and DATETIME_ID >= '2015-02-02 09:01' and DATETIME_ID < '2015-02-02 09:31' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>impactdSubs = sqlimpactdSubs</Validate>
+</RepeatValidation>
+<Validate>sort{failures} = desc</Validate>
+<RepeatDrillDown instruction="all">3</RepeatDrillDown>
+<PassToDrillDown id="3">TAC,eventId,failures</PassToDrillDown>
+</TestCase>
+
+<TestCase id="3">
+<Precondition>2.failures > 0</Precondition>
+<Direction>Drill On Failures</Direction>
+<Url><![CDATA[TERMINAL/LTE_HFA_DETAILED_EVENT_ANALYSIS/TERMINAL?time={time}&display=grid&tzOffset=%2B0530&maxRows=500&tac={2.TAC}&eventID={2.eventId}]]></Url>
+<JSONVariables>1:hierId,2:HIID,3:THIERID,4:THIID,5:eventTime,7:IMSI,8:TAC,9:terminalMake,10:terminalModel,11:eventId,12:eventType</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select isnull(CAST(rawview.imsi as varchar),' ') as 'sqlIMSI' from event_e_lte_hfa_err_raw as rawview where DATETIME_ID >= '2015-01-28 00:00' and DATETIME_ID < '2015-02-04 00:00' and rawview.EVENT_ID = {2.eventId} and rawview.TAC = {2.TAC} and event_time = '{eventTime}' and imsi={IMSI}]]></SqlTest>
+<Validate>IMSI = sqlIMSI </Validate>
+<SqlTest><![CDATA[select count (*) as 'sqlFailures' from event_e_lte_hfa_err_raw as rawview where DATETIME_ID >= '2015-01-28 00:00' and DATETIME_ID < '2015-02-04 00:00' and rawview.EVENT_ID = {2.eventId} and rawview.TAC = {2.TAC}]]></SqlTest>
+<Validate>2.failures =sqlFailures </Validate>
+</RepeatValidation>
+<Validate>2.failures = count{eventTime}</Validate>
+</TestCase>
+
+</TestSuite>

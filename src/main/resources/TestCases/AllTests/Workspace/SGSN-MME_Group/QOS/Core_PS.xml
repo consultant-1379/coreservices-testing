@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TestSuite> 
+
+
+<TestCase id="1">
+<MaxValidation>10</MaxValidation>
+<Direction>Launch -> SGSN-MME group -> QOS -> Core PS</Direction> 
+<Url><![CDATA[NETWORK/QOS_STATISTICS?time=720&type=SGSN&groupname={-master-qos-sgsngroup-}&display=grid&tzOffset=+0100&maxRows=500]]></Url> 
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?type=SGSN&groupname={-master-qos-sgsngroup-}&display=grid&tzOffset=+0000&dataTimeFrom=1415491200000&dataTimeTo=1416096000000&userName=admin&url=NETWORK/QOS_STATISTICS&maxRows=0]]></CSVUrl>
+<JSONVariables>1:qciId,2:qciDesc,3:failures,4:successes,5:impactedSubs</JSONVariables>  
+<RepeatValidation instruction="all"> 
+	<SqlTest><![CDATA[select sum(qci_err_{qciId}) as 'sqlFailures' from event_e_lte_err_raw where event_source_name in (select event_source_name from group_type_e_evntsrc where group_name = '{-master-qos-sgsngroup}') and DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30' and tac not in (select tac from group_type_E_tac where group_name = 'EXCLUSIVE_TAC') and qci_err_{qciId} > 0]]></SqlTest> 
+	<Validate>failures = sqlFailures</Validate> 
+	<SqlTest><![CDATA[select sum (qci_suc_{qciId}) as 'sqlSuccesses' from event_e_lte_apn_eventid_evntsrc_vend_hier3_suc_15min where event_source_name in (select event_source_name from group_type_e_evntsrc where group_name = '{-master-qos-sgsngroup}') and DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30' and qci_suc_{qciId} > 0]]></SqlTest> 
+	<Validate>successes = sqlSuccesses</Validate> 
+	<SqlTest><![CDATA[select count(distinct(imsi)) as 'sqlImpacted' from EVENT_E_LTE_ERR_RAW where DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and event_source_name in (select event_source_name from group_type_e_evntsrc where group_name = '{-master-qos-sgsngroup}') and qci_err_{qciId} > 0 and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest> 
+	<Validate>impactedSubs = sqlImpacted</Validate> 
+</RepeatValidation> 
+<RepeatDrillDown instruction="all">2</RepeatDrillDown> 
+<PassToDrillDown id="2">qciId,failures</PassToDrillDown>
+</TestCase>
+
+
+<TestCase id="2">
+<PreCondition>1.failures > 0</PreCondition>
+<Direction>Drill on Failures</Direction> 
+<Url><![CDATA[NETWORK/EVENT_ANALYSIS?time=720&groupname={-master-qos-sgsngroup-}&display=grid&tzOffset=+0100&maxRows=500&key=ERR&type=SGSN&dataTieredDelay=true&qci_id={1.qciId}]]></Url> 
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?groupname={-master-qos-sgsngroup-}&display=grid&tzOffset=+0000&key=ERR&type=SGSN&dataTieredDelay=true&qci_id={1.qciId}&dataTimeFrom=1415491200000&dataTimeTo=1416096000000&userName=admin&url=NETWORK/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+<JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventIdDesc,8:eventResDesc,9:causeProtDesc,10:causeCodeID,11:causeCodeDesc,12:subCauseCodeID,13:subCauseCodeDesc,14:sgsnMme,15:ratDesc,16:controller,18:accessArea,19:vendor,57:apn,76:ratId,101:qciErrOne,102:qciErrTwo,103:qciErrThree,104:qciErrFour,105:qciErrFive,106:qciErrSix,107:qciErrSeven,108:qciErrEight,109:qciErrNine,110:qciErrTen</JSONVariables>  
+<IgnoredInCsv>72:sysCauseCode,73:sysSubcause,74:sysEventRes,75:sysCauseProt</IgnoredInCsv>
+<RepeatValidation instruction="all"> 
+	  <SqlTest instruction="Use:ratId"><![CDATA[select qci_err_{1.qciId} as 'sqlQciMaster', tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {imsi} and event_time = '{eventTime}' and tac = {tac} and event_source_name in (select event_source_name from group_type_e_evntsrc where group_name = '{-master-qos-sgsngroup}') and cause_code = {causeCodeID} and subcause_code = {subCauseCodeID} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and qci_err_1 = {qciErrOne} and qci_err_2 = {qciErrTwo} and qci_err_3 = {qciErrThree} and qci_err_4 = {qciErrFour} and qci_err_5 = {qciErrFive} and qci_err_6 = {qciErrSix} and qci_err_7 = {qciErrSeven} and qci_err_8 = {qciErrEight} and qci_err_9 = {qciErrNine} and qci_err_10 = {qciErrTen} and event_id = (select event_id from dim_e_lte_eventtype where event_id_desc = '{eventIdDesc}') and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00']]></SqlTest>
+ 	<Validate>tac = sqlTac,sgsnMme = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,vendor = sqlVendor</Validate>
+ 	<Validate>sqlQciMaster > 0 </Validate>
+</RepeatValidation> 
+		<SqlTest><![CDATA[select count(*) as 'sqlFailures' from event_e_lte_err_raw where event_source_name in (select event_source_name from group_type_e_evntsrc where group_name = '{-master-qos-sgsngroup}') and DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30' and qci_err_{1.qciId} > 0 and tac not in (select tac from group_type_E_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+	<Validate>sort{eventTime} = desc</Validate>	
+	<Validate>sqlFailures = count{eventTime}</Validate>
+</TestCase>
+
+
+</TestSuite> 

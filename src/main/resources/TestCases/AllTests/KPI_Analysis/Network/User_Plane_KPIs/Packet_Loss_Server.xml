@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<TestCase id="1">
+   <Direction>Launch -> Network -> Packet Loss Server -> Map</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/USER_PLANE/KPI_MAP?time={time}&tzOffset=+0000]]></Url>
+   <JSONVariables>kpis.Packet Loss Server:PLServer</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[SELECT CAST(ISNULL(ROUND(AVG(CAST(PACKET_LOSS_NET AS DECIMAL(32,16))),4),0) AS NUMERIC(16,4)) AS 'sqlPLServer' FROM dc.EVENT_E_USER_PLANE_TCP_RAW WHERE FIVE_MIN_AGG_TIME >= '2014-12-01 08:00' AND FIVE_MIN_AGG_TIME < '2014-12-01 08:15'
+   AND HIER3_ID IS NOT NULL AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+   <Validate precision="12">PLServer = sqlPLServer</Validate>
+   </RepeatValidation>
+   <RepeatDrillDown instruction="all">2</RepeatDrillDown>
+</TestCase>
+
+<TestCase id="2">
+   <Direction>Chart</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/USER_PLANE/KPI_CHART?time={time}&tzOffset=+0000]]></Url>
+   <JSONVariables>kpiTime:kpiTimeInMilliseconds,kpiTime:fiveMinAggTime,kpiTime:fiveMinDateTime,Packet Loss Server:PLServerTotal,Packet Loss Server Samples:PLServerTotalSample</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[SELECT CAST(ISNULL(ROUND(AVG(CAST(PACKET_LOSS_NET AS DECIMAL(32,16))),4),0) AS NUMERIC(16,4))  AS 'sqlPLServer', COUNT(PACKET_LOSS_NET) AS 'sqlPLServerSAMPLE' FROM dc.EVENT_E_USER_PLANE_TCP_RAW WHERE {fiveMinAggTime} AND HIER3_ID IS NOT NULL AND ISNULL(TAC,-1) NOT IN(SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+   <Validate precision="4">PLServerTotal = sqlPLServer,PLServerTotalSample = sqlPLServerSAMPLE</Validate>
+   </RepeatValidation>
+   <RepeatDrillDown instruction="all">3,4,5,6</RepeatDrillDown>
+   <PassToDrillDown id="3">kpiTimeInMilliseconds,fiveMinAggTime,fiveMinDateTime</PassToDrillDown>
+   <PassToDrillDown id="4">kpiTimeInMilliseconds,fiveMinAggTime,fiveMinDateTime</PassToDrillDown>
+   <PassToDrillDown id="5">kpiTimeInMilliseconds,fiveMinAggTime,fiveMinDateTime</PassToDrillDown>
+   <PassToDrillDown id="6">kpiTimeInMilliseconds,fiveMinAggTime,fiveMinDateTime</PassToDrillDown>
+   <Validate>sort{kpiTimeInMilliseconds} = asc</Validate>
+</TestCase>
+
+<TestCase id="3">
+   <PreConditionSql><![CDATA[select count(*) as 'sqlCount' from EVENT_E_RAN_SESSION_RAW where {2.fiveMinDateTime}]]></PreConditionSql>
+   <PreCondition><![CDATA[sqlCount > 0]]></PreCondition>
+   <Direction>Chart By Options -> RSCP</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/USER_PLANE/KPI_CHART/KPI_DRILL?time={time}&kpiStartTime={2.kpiTimeInMilliseconds}&tzOffset=+0000&drilltype=RSCP_AVG&kpiId=5]]></Url>
+   <JSONVariables>DrillBy:RSCP,Value:PLServer,Samples:PLServerSample</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[SELECT CAST(ISNULL(ROUND(AVG(CAST(PACKET_LOSS_NET AS DECIMAL(32,16))),4),0) AS NUMERIC(16,4))  AS 'sqlPLServer', COUNT(PACKET_LOSS_NET) AS 'sqlPLServerSAMPLE' FROM EVENT_E_USER_PLANE_TCP_RAW a, EVENT_E_RAN_SESSION_RAW b WHERE a.HIER3_ID = b.START_HIER3_ID AND a.IMSI = b.IMSI
+   AND a.HIER3_ID IS NOT NULL AND a.{2.fiveMinAggTime} AND b.{2.fiveMinDateTime} AND RSCP_AVG = {RSCP} AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+   <Validate precision="4">PLServer = sqlPLServer,PLServerSample = sqlPLServerSAMPLE</Validate>
+   </RepeatValidation>
+</TestCase>
+
+<TestCase id="4">
+   <PreConditionSql><![CDATA[select count(*) as 'sqlCount' from EVENT_E_RAN_SESSION_RAW where {2.fiveMinDateTime}]]></PreConditionSql>
+   <PreCondition><![CDATA[sqlCount > 0]]></PreCondition>
+   <Direction>Chart By Options -> EcNo</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/USER_PLANE/KPI_CHART/KPI_DRILL?time={time}&kpiStartTime={2.kpiTimeInMilliseconds}&tzOffset=+0000&drilltype=ECNO_AVG&kpiId=5]]></Url>
+   <JSONVariables>DrillBy:ECNO,Value:PLServer,Samples:PLServerSample</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[SELECT CAST(ISNULL(ROUND(AVG(CAST(PACKET_LOSS_NET AS DECIMAL(32,16))),4),0) AS NUMERIC(16,4)) AS 'sqlPLServer', COUNT(PACKET_LOSS_NET) AS 'sqlPLServerSAMPLE' FROM EVENT_E_USER_PLANE_TCP_RAW a, EVENT_E_RAN_SESSION_RAW b WHERE a.HIER3_ID = b.START_HIER3_ID AND a.IMSI = b.IMSI
+   AND a.HIER3_ID IS NOT NULL AND a.{2.fiveMinAggTime} AND b.{2.fiveMinDateTime} AND ECNO_AVG = {ECNO} AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+   <Validate precision="4">PLServer = sqlPLServer,PLServerSample = sqlPLServerSAMPLE</Validate>
+   </RepeatValidation>
+</TestCase>
+
+<TestCase id="5">
+   <PreConditionSql><![CDATA[select count(*) as 'sqlCount' from EVENT_E_RAN_SESSION_RAW where {2.fiveMinDateTime}]]></PreConditionSql>
+   <PreCondition><![CDATA[sqlCount > 0]]></PreCondition>
+   <Direction>Chart By Options -> UL Interference</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/USER_PLANE/KPI_CHART/KPI_DRILL?time={time}&kpiStartTime={2.kpiTimeInMilliseconds}&tzOffset=+0000&drilltype=UL_INTERFERENCE_AVG&kpiId=5]]></Url>
+   <JSONVariables>DrillBy:UL,Value:PLServer,Samples:PLServerSample</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[SELECT CAST(ISNULL(ROUND(AVG(CAST(PACKET_LOSS_NET AS DECIMAL(32,16))),4),0) AS NUMERIC(16,4))  AS 'sqlPLServer', COUNT(PACKET_LOSS_NET) AS 'sqlPLServerSAMPLE' FROM EVENT_E_USER_PLANE_TCP_RAW a, EVENT_E_RAN_SESSION_RAW b WHERE a.HIER3_ID = b.START_HIER3_ID AND a.IMSI = b.IMSI
+   AND a.HIER3_ID IS NOT NULL AND a.{2.fiveMinAggTime} AND b.{2.fiveMinDateTime} AND UL_INTERFERENCE_AVG = {UL} AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+   <Validate precision="4">PLServer = sqlPLServer,PLServerSample = sqlPLServerSAMPLE</Validate>
+   </RepeatValidation>
+</TestCase>
+
+<TestCase id="6">
+   <PreConditionSql><![CDATA[select count(*) as 'sqlCount' from EVENT_E_RAN_SESSION_RAW where {2.fiveMinDateTime}]]></PreConditionSql>
+   <PreCondition><![CDATA[sqlCount > 0]]></PreCondition>
+   <Direction>Chart By Options -> HS Users in Cell</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/USER_PLANE/KPI_CHART/KPI_DRILL?time={time}&kpiStartTime={2.kpiTimeInMilliseconds}&tzOffset=+0000&drilltype=HSDSCH_AVG_USERS&kpiId=5]]></Url>
+   <JSONVariables>DrillBy:HSDSCH,Value:PLServer,Samples:PLServerSample</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[SELECT CAST(ISNULL(ROUND(AVG(CAST(PACKET_LOSS_NET AS DECIMAL(32,16))),4),0) AS NUMERIC(16,4))  AS 'sqlPLServer', COUNT(PACKET_LOSS_NET) AS 'sqlPLServerSAMPLE' FROM EVENT_E_USER_PLANE_TCP_RAW a, EVENT_E_RAN_SESSION_RAW b WHERE a.HIER3_ID = b.START_HIER3_ID AND a.IMSI = b.IMSI
+   AND a.HIER3_ID IS NOT NULL AND a.{2.fiveMinAggTime} AND b.{2.fiveMinDateTime} AND HSDSCH_AVG_USERS = {HSDSCH} AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+   <Validate precision="4">PLServer = sqlPLServer,PLServerSample = sqlPLServerSAMPLE</Validate>
+   </RepeatValidation>
+</TestCase>
+
+</TestSuite>

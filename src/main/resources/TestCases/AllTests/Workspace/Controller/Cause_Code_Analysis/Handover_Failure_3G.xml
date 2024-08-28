@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<TestCase id="1">
+<Direction>Launch -> Controller -> Cause Code Analysis -> Handover Failure (3G) -> Grid View </Direction>
+<MaxValidation>6</MaxValidation>
+<Url><![CDATA[NETWORK/WCDMA_HFA_CAUSE_CODE_ANALYSIS/CAUSE_CODE_GRID?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&type=BSC&node={-master-SGEHHFAControllerNode}&display=grid&tzOffset=%2B0000]]></Url>
+<JSONVariables>3:failures,6:causeId,7:eventId,8:categoryId,11:stateDesc</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest instruction="Use:categoryId"><![CDATA[select count(*) as 'sqlFailures' from EVENT_E_RAN_HFA_SOHO_ERR_RAW as raw where HIER3_ID = {-master-WcdmaControllerNodeId} and DATETIME_ID >= '2015-02-18 05:00' and DATETIME_ID < '2015-02-18 07:00'and ISNULL(raw.TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and CAUSE_VALUE = {causeId} and EVENT_ID = {eventId}]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">2,4</RepeatDrillDown>
+    <PassToDrillDown id="2">failures,causeId,eventId,categoryId,stateDesc</PassToDrillDown>
+    <PassToDrillDown id="4">failures,causeId,eventId,categoryId,stateDesc</PassToDrillDown>
+</TestCase>
+
+<TestCase id="2">
+<PreCondition>1.categoryId != 1</PreCondition>
+<Direction>Drill on Cause Code</Direction>
+<Url><![CDATA[NETWORK/WCDMA_HFA_CAUSE_CODE_ANALYSIS/SUB_CAUSE_CODE_GRID?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&type=BSC&node={-master-SGEHHFAControllerNode}&display=grid&tzOffset=%2B0000&causeCode={1.causeId}&eventID={1.eventId}&categoryId={1.categoryId}&state={1.stateDesc}&type=BSC]]></Url>
+<JSONVariables>3:subfailures,6:causeId,7:subCauseId,8:eventId,9:categoryId,12:stateDesc</JSONVariables>
+<Validate>1.failures = sum{subfailures}</Validate>
+<RepeatValidation instruction="all">
+<SqlTest instruction="Use:categoryId"><![CDATA[select count(*) as 'sqlFails' from EVENT_E_RAN_HFA_SOHO_ERR_RAW as raw where HIER3_ID = {-master-WcdmaControllerNodeId} and DATETIME_ID >= '2015-02-18 05:00' and DATETIME_ID < '2015-02-18 07:00'and ISNULL(raw.TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and CAUSE_VALUE = {causeId} and EVENT_ID = {eventId} and SUB_CAUSE_VALUE = {subCauseId}]]></SqlTest>
+<Validate>subfailures = sqlFails</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">3</RepeatDrillDown>
+    <PassToDrillDown id="3">subfailures,causeId,subCauseId,eventId,categoryId,stateDesc</PassToDrillDown>
+</TestCase>
+
+<TestCase id="3">
+<Direction>Drill on Sub cause Code (Detailed View)</Direction>
+<Url><![CDATA[NETWORK/WCDMA_HFA_CAUSE_CODE_ANALYSIS/DETAIL_SUB_CAUSE_CODE_GRID?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&type=BSC&node={-master-SGEHHFAControllerNode}&display=grid&tzOffset=%2B0000&causeCode={2.causeId}&subCauseCode={2.subCauseId}&eventID={2.eventId}&categoryId={2.categoryId}&state={2.stateDesc}&type=BSC]]></Url>
+<JSONVariables>1:eventTime</JSONVariables>
+    <Validate>2.subfailures = count{eventTime}</Validate>
+</TestCase>
+
+<TestCase id="4">
+<PreCondition>1.categoryId = 1</PreCondition>
+<Direction>Drill on Cause Code HSDSCH(Detailed View)</Direction>
+<Url><![CDATA[NETWORK/WCDMA_HFA_CAUSE_CODE_ANALYSIS/DETAIL_SUB_CAUSE_CODE_GRID?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&type=BSC&node={-master-SGEHHFAControllerNode}&display=grid&tzOffset=%2B0000&causeCode={1.causeId}&eventID={1.eventId}&categoryId={1.categoryId}&state={1.stateDesc}&type=BSC]]></Url>
+<JSONVariables>1:eventTime</JSONVariables>
+    <Validate>1.failures = count{eventTime}</Validate>
+</TestCase>
+</TestSuite>

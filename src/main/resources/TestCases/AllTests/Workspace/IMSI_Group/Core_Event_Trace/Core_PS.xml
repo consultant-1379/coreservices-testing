@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+
+	<TestCase id="1">
+		<Direction>Launch -> Imsi Group -> Core Event Trace -> Core PS</Direction>
+		<Url><![CDATA[SUBSCRIBER/EVENT_ANALYSIS?time=30&type=IMSI&groupname={-master-imsi-group-}&display=grid&key=SUM&tzOffset=+0100&maxRows=500]]></Url>
+		<CSVUrl><![CDATA[EniqEventsCSV.jsp?type=IMSI&groupname={-master-imsi-group-}&display=grid&key=SUM&tzOffset=+0000&dataTimeFrom=1415979900000&dataTimeTo=1415981700000&userName=admin&url=SUBSCRIBER/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+		<JSONVariables>1:imsiGroupName,2:eventId,3:eventIdDesc,4:failures,5:successes,6:totalEvents,7:succRatio,8:impactedSubs</JSONVariables>
+		<IgnoredInCsv>1:imsiGroupName,2:eventId</IgnoredInCsv>
+		<RepeatValidation instruction="random2">
+		    <SqlTest instruction="use:eventId"><![CDATA[select count(*) as 'sqlFailures' from EVENT_E_SGEH_ERR_RAW where IMSI in (select imsi from group_type_e_imsi where group_name = '{-master-imsi-group-}') and event_id = {eventId} and DATETIME_ID >= '2014-05-29 13:15' and DATETIME_ID < '2014-05-29 13:30']]></SqlTest>
+		    <Validate>failures = sqlFailures</Validate>
+
+		    <SqlTest success_raw="false" instruction="use:eventId"><![CDATA[select sum(no_of_successes) as 'sqlSuccesses' from EVENT_E_SGEH_imsi_suc_raw where IMSI in (select imsi from group_type_e_imsi where group_name = '{-master-imsi-group-}') and event_id = {eventId} and DATETIME_ID >= '2014-05-29 13:15' and DATETIME_ID < '2014-05-29 13:30']]></SqlTest>
+		    <SqlTest success_raw="true" instruction="use:eventId"><![CDATA[select count(*) as 'sqlSuccesses' from EVENT_E_SGEH_suc_raw where IMSI in (select imsi from group_type_e_imsi where group_name = '{-master-imsi-group-}') and event_id = {eventId} and DATETIME_ID >= '2014-05-29 13:15' and DATETIME_ID < '2014-05-29 13:30']]></SqlTest>
+		    <Validate>successes = sqlSuccesses</Validate>
+
+		    <SqlTest instruction="use:eventId"><![CDATA[select count(distinct(imsi)) as 'sqlImpacted' from EVENT_E_SGEH_ERR_RAW where IMSI in (select imsi from group_type_e_imsi where group_name = '{-master-imsi-group-}') and event_id = {eventId} and DATETIME_ID >= '2014-05-29 13:15' and DATETIME_ID < '2014-05-29 13:30']]></SqlTest>
+		    <Validate>failures = sqlFailures</Validate>
+
+		    <Validate>impactedSubs = sqlImpacted</Validate>
+		    <Validate>successes + failures = totalEvents</Validate>
+		    <Validate>( successes / totalEvents ) * 100 = succRatio</Validate>
+		</RepeatValidation>
+		<RepeatDrillDown instruction="random3">2</RepeatDrillDown>
+		<PassToDrillDown id="2">imsiGroupName,failures,eventId</PassToDrillDown>
+	</TestCase>
+
+
+	<TestCase id="2">
+		<PreCondition>1.failures > 0</PreCondition>
+		<Direction>Drill on failures</Direction>
+		<Url><![CDATA[SUBSCRIBER/EVENT_ANALYSIS?time=30&display=grid&tzOffset=+0100&maxRows=500&type=IMSI&key=ERR&groupname={-master-imsi-group-}&eventID={1.eventId}]]></Url>
+		<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&type=IMSI&key=ERR&groupname={-master-imsi-group-}&eventID={1.eventId}&dataTimeFrom=1415979900000&dataTimeTo=1415981700000&userName=admin&url=SUBSCRIBER/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+		<IgnoredInCsv>72:sysCauseCode,73:sysSubcause,74:sysEventRes,75:sysCauseProt</IgnoredInCsv>
+		<JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventType,8:eventResult,10:causeCodeId,12:subCauseCodeId,13:subCauseCode,14:SGSNMME,16:controller,18:accessArea,19:vendor,57:apn,74:eventResId,75:causeProtId,76:ratId</JSONVariables>
+		<RepeatValidation instruction="all">
+		   <SqlTest instruction="Use:ratId,eventResId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {imsi} and event_time = '{eventTime}' and cause_code = {causeCodeId} and subcause_code = {subCauseCodeId} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac = {tac}]]></SqlTest>
+		    <Validate>tac = sqlTac,SGSNMME = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,1.eventId = sqlEventID,accessArea = sqlHierarchyOne,vendor = sqlVendor</Validate>
+		</RepeatValidation>
+			<Validate>sort{eventTime} = desc</Validate>   
+		    <Validate>1.failures = count{eventTime}</Validate>
+	</TestCase>  
+</TestSuite>

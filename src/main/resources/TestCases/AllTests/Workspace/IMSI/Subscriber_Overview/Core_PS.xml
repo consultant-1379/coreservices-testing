@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TestSuite> 
+
+<TestCase id="1">
+<Direction>Launch -> Imsi -> Subscriber Overview -> Core PS</Direction> 
+<Url><![CDATA[SUBSCRIBER/SUBBI/FAILURE?time=30&type=IMSI&imsi={-master-imsi-}&display=chart&tzOffset=+0100&maxRows=500]]></Url> 
+<JSONVariables>1:failures,2:successes,3:eventIdNode,3:eventIdFromEventIdNode</JSONVariables>  
+<RepeatValidation instruction="all"> 
+	<SqlTest instruction="use:eventIdFromEventIdNode"><![CDATA[select count(*) as 'sqlFailures' from event_e_lte_err_raw where imsi = {-master-imsi-} and event_id = {eventIdFromEventIdNode} and DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30']]></SqlTest> 
+	<Validate>failures = sqlFailures</Validate> 
+
+	<SqlTest success_raw="false" instruction="use:eventIdFromEventIdNode"><![CDATA[select sum(no_of_successes) as 'sqlSuccesses' from event_e_lte_imsi_suc_raw where imsi = {-master-imsi-} and event_id = {eventIdFromEventIdNode} and DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30']]></SqlTest>
+	<SqlTest success_raw="true" instruction="use:eventIdFromEventIdNode"><![CDATA[select count(*) as 'sqlSuccesses' from event_e_lte_suc_raw where imsi = {-master-imsi-} and event_id = {eventIdFromEventIdNode} and DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30']]></SqlTest>  
+	<Validate>successes = sqlSuccesses</Validate>  
+</RepeatValidation> 
+<RepeatDrillDown instruction="all">2,3,5,7,9,11,13,15</RepeatDrillDown> 
+<PassToDrillDown id="2">failures,eventIdNode,eventIdFromEventIdNode</PassToDrillDown>
+</TestCase>
+
+<TestCase id="2">
+<PreCondition>1.failures > 0</PreCondition>
+<MaxRowCount>100</MaxRowCount>
+<Direction>Drill on Failures</Direction> 
+<Url><![CDATA[SUBSCRIBER/SUBBI/FAILURE?dateFrom=10072014&dateTo=10072014&timeFrom=1230&timeTo=1300&node={1.eventIdNode}&type=IMSI&imsi={-master-imsi-}&display=grid&tzOffset=+0100&maxRows=500]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?node={1.eventIdNode}&type=IMSI&imsi={-master-imsi-}&display=grid&tzOffset=%2B0000&dataTimeFrom=1416078000000&dataTimeTo=1416163500000&userName=admin&url=SUBSCRIBER/SUBBI/FAILURE&maxRows=0]]></CSVUrl> 
+<JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventIdDesc,8:eventResDesc,9:causeProtDesc,10:causeCodeID,11:causeCodeDesc,12:subCauseCodeID,13:subCauseCodeDesc,14:sgsnMme,15:ratDesc,16:controller,18:accessArea,19:vendor,57:apn,76:ratId</JSONVariables>  
+<RepeatValidation instruction="all"> 
+	  <SqlTest instruction="Use:ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {imsi} and tac = {tac} and event_time = '{eventTime}' and cause_code = {causeCodeID} and subcause_code = {subCauseCodeID} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and event_id = {1.eventIdFromEventIdNode} and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00']]></SqlTest>
+ 	<Validate>tac = sqlTac,sgsnMme = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,vendor = sqlVendor</Validate>
+</RepeatValidation> 
+	<Validate>sort{eventTime} = desc</Validate>
+	<Validate>1.failures = count{eventTime}</Validate>
+</TestCase>
+
+<TestCase id="3">
+<Direction>Select APN Usage View</Direction> 
+<Url><![CDATA[SUBSCRIBER/SUBBI/APN?dateFrom=10072014&dateTo=10072014&timeFrom=1245&timeTo=1315&type=IMSI&imsi={-master-imsi-}&display=chart&tzOffset=+0100&maxRows=500]]></Url> 
+<JSONVariables>1:failures,2:successes,3:apn</JSONVariables>  
+<RepeatValidation instruction="all"> 
+	<SqlTest instruction="plus:sgeh"><![CDATA[select count(*) as 'sqlFailures' from event_e_lte_err_raw where imsi = {-master-imsi-} and apn = '{apn}' and DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30']]></SqlTest> 
+	<Validate>failures = sqlFailures</Validate> 
+
+	<SqlTest success_raw="false" instruction="plus:sgeh"><![CDATA[select sum(no_of_successes) as 'sqlSuccesses' from event_e_lte_imsi_suc_raw where imsi = {-master-imsi-} and apn = '{apn}' and DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30']]></SqlTest> 
+	<SqlTest success_raw="true" instruction="plus:sgeh"><![CDATA[select count(*) as 'sqlSuccesses' from event_e_lte_suc_raw where imsi = {-master-imsi-} and apn = '{apn}' and DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30']]></SqlTest> 
+	<Validate>successes = sqlSuccesses</Validate>  
+</RepeatValidation>
+<RepeatDrillDown instruction="all">4</RepeatDrillDown> 
+<PassToDrillDown id="4">failures,apn</PassToDrillDown>
+</TestCase>
+
+
+<TestCase id="4">
+<PreCondition>3.failures > 0</PreCondition>
+<MaxRowCount>100</MaxRowCount>
+<Direction>Drill on Failures</Direction> 
+<Url><![CDATA[SUBSCRIBER/SUBBI/APN?dateFrom=10072014&dateTo=10072014&timeFrom=1245&timeTo=1315&apn={3.apn}&type=IMSI&imsi={-master-imsi-}&display=grid&tzOffset=+0100&maxRows=500]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?apn={3.apn}&type=IMSI&imsi={-master-imsi-}&display=grid&tzOffset=%2B0000&dataTimeFrom=1416078000000&dataTimeTo=1416163500000&userName=admin&url=SUBSCRIBER/SUBBI/APN&maxRows=0]]></CSVUrl> 
+<JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventIdDesc,8:eventResDesc,9:causeProtDesc,10:causeCodeID,11:causeCodeDesc,12:subCauseCodeID,13:subCauseCodeDesc,14:sgsnMme,15:ratDesc,16:controller,18:accessArea,19:vendor,57:apn,76:ratId</JSONVariables>  
+<RepeatValidation instruction="all"> 
+	  <SqlTest instruction="Use:ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {imsi} and tac = {tac} and event_time = '{eventTime}' and cause_code = {causeCodeID} and subcause_code = {subCauseCodeID} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and apn = '{3.apn}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00']]></SqlTest>
+ 	<Validate>tac = sqlTac,sgsnMme = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,vendor = sqlVendor</Validate>
+</RepeatValidation>
+	<Validate>sort{eventTime} = desc</Validate> 
+	<Validate>3.failures = count{eventTime}</Validate>
+</TestCase>
+
+<TestCase id="5" type="busyhour">
+<Direction>Select Busy Hour View</Direction> 
+<Url><![CDATA[SUBSCRIBER/SUBBI/BUSY_HOUR?time=1440&type=IMSI&imsi={-master-imsi-}&display=chart&tzOffset=+0100&maxRows=500]]></Url> 
+<JSONVariables>1:failures,2:successes,3:hourId,3:busyhour</JSONVariables>  
+<RepeatValidation instruction="all"> 
+	<SqlTest instruction="plus:sgeh"><![CDATA[select count(*) as 'sqlFailures' from event_e_lte_err_raw where imsi = {-master-imsi-} and {busyhour} and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00']]></SqlTest> 
+	<Validate>failures = sqlFailures</Validate> 
+
+	<SqlTest success_raw="false" instruction="plus:sgeh"><![CDATA[select sum(no_of_successes) as 'sqlSuccesses' from event_e_lte_imsi_suc_raw where imsi = {-master-imsi-} and {busyhour} and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00']]></SqlTest> 
+	<SqlTest success_raw="true" instruction="plus:sgeh"><![CDATA[select count(*) as 'sqlSuccesses' from event_e_lte_suc_raw where imsi = {-master-imsi-} and {busyhour} and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00']]></SqlTest> 
+	<Validate>successes = sqlSuccesses</Validate>  
+</RepeatValidation> 
+<RepeatDrillDown instruction="all">6</RepeatDrillDown> 
+<PassToDrillDown id="6">failures,hourId</PassToDrillDown>
+</TestCase>
+
+
+<TestCase id="6" type="busyhour">
+<MaxRowCount>100</MaxRowCount>
+<PreCondition>5.failures > 0</PreCondition>
+<Direction>Drill on Failures</Direction> 
+<Url><![CDATA[SUBSCRIBER/SUBBI/BUSY_HOUR?dateFrom=09072014&dateTo=10072014&timeFrom=1415&timeTo=1415&HOUR={5.hourId}&type=IMSI&imsi={-master-imsi-}&display=grid&tzOffset=+0100&maxRows=500]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?HOUR={5.hourId}&type=IMSI&imsi={-master-imsi-}&display=grid&tzOffset=%2B0000&dataTimeFrom=1416078000000&dataTimeTo=1416163500000&userName=admin&url=SUBSCRIBER/SUBBI/BUSY_HOUR&maxRows=0]]></CSVUrl>
+<JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventIdDesc,8:eventResDesc,9:causeProtDesc,10:causeCodeID,11:causeCodeDesc,12:subCauseCodeID,13:subCauseCodeDesc,14:sgsnMme,15:ratDesc,16:controller,18:accessArea,19:vendor,57:apn,76:ratId</JSONVariables>  
+<RepeatValidation instruction="all"> 
+	  <SqlTest instruction="Use:ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {imsi} and tac = {tac} and event_time = '{eventTime}' and cause_code = {causeCodeID} and subcause_code = {subCauseCodeID} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00']]></SqlTest>
+ 	<Validate>tac = sqlTac,sgsnMme = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,vendor = sqlVendor</Validate>
+</RepeatValidation>
+	<Validate>sort{eventTime} = desc</Validate> 
+	<Validate>5.failures = count{eventTime}</Validate>
+</TestCase>
+
+
+<TestCase id="7" type="busyday">
+<Direction>Select Busy Day View</Direction> 
+<Url><![CDATA[SUBSCRIBER/SUBBI/BUSY_DAY?time=10080&type=IMSI&imsi={-master-imsi-}&display=chart&tzOffset=+0100&maxRows=500]]></Url> 
+<JSONVariables>1:failures,2:successes,3:dayName,3:busyday</JSONVariables>  
+<RepeatValidation instruction="all"> 
+	<SqlTest instruction="plus:sgeh"><![CDATA[select count(*) as 'sqlFailures' from event_e_lte_err_raw where imsi = {-master-imsi-} and {busyday} and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00']]></SqlTest> 
+	<Validate>failures = sqlFailures</Validate> 
+
+	<SqlTest success_raw="false" instruction="plus:sgeh"><![CDATA[select sum(no_of_successes) as 'sqlSuccesses' from event_e_lte_imsi_suc_raw where imsi = {-master-imsi-} and {busyday} and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00']]></SqlTest> 
+	<SqlTest success_raw="true" instruction="plus:sgeh"><![CDATA[select count(*) as 'sqlSuccesses' from event_e_lte_suc_raw where imsi = {-master-imsi-} and {busyday} and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00']]></SqlTest>
+	<Validate>successes = sqlSuccesses</Validate>  
+</RepeatValidation> 
+<RepeatDrillDown instruction="all">8</RepeatDrillDown> 
+<PassToDrillDown id="8">failures,dayName</PassToDrillDown>
+</TestCase>
+
+
+<TestCase id="8" type="busyday">
+<MaxRowCount>100</MaxRowCount>
+<PreCondition>7.failures > 0</PreCondition>
+<Direction>Drill on Failures</Direction> 
+<Url><![CDATA[SUBSCRIBER/SUBBI/BUSY_DAY?dateFrom=03072014&dateTo=10072014&timeFrom=0100&timeTo=0100&DAY={7.dayName}&type=IMSI&imsi={-master-imsi-}&display=grid&tzOffset=+0100&maxRows=500]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?DAY={7.dayName}&type=IMSI&imsi={-master-imsi-}&display=grid&tzOffset=%2B0000&dataTimeFrom=1415491200000&dataTimeTo=1416096000000&userName=admin&url=SUBSCRIBER/SUBBI/BUSY_DAY&maxRows=0]]></CSVUrl>
+<JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventIdDesc,8:eventResDesc,9:causeProtDesc,10:causeCodeID,11:causeCodeDesc,12:subCauseCodeID,13:subCauseCodeDesc,14:sgsnMme,15:ratDesc,16:controller,18:accessArea,19:vendor,57:apn,76:ratId</JSONVariables>  
+<RepeatValidation instruction="all"> 
+	  <SqlTest instruction="Use:ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {imsi} and tac = {tac} and event_time = '{eventTime}' and cause_code = {causeCodeID} and subcause_code = {subCauseCodeID} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00']]></SqlTest>
+ 	<Validate>tac = sqlTac,sgsnMme = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,vendor = sqlVendor</Validate>
+</RepeatValidation>
+	<Validate>sort{eventTime} = desc</Validate> 
+	<Validate>7.failures = count{eventTime}</Validate>
+</TestCase>-->
+
+
+<TestCase id="9">
+<Direction>Select Access Area Usage View</Direction> 
+<Url><![CDATA[SUBSCRIBER/SUBBI/CELL?dateFrom=10072014&dateTo=10072014&timeFrom=1245&timeTo=1315&type=IMSI&imsi={-master-imsi-}&display=chart&tzOffset=+0100&maxRows=500]]></Url> 
+<JSONVariables>1:failures,2:successes,3:cellNode,3:accessAreaFromCellNode,3:controllerFromCellNode,3:vendorFromCellNode,3:ratIdFromCellNode</JSONVariables>  
+<RepeatValidation instruction="all"> 
+	<SqlTest instruction="use:ratIdFromCellNode"><![CDATA[select count(*) as 'sqlFailures' from event_e_lte_err_raw where imsi = {-master-imsi-} and hierarchy_3 = '{controllerFromCellNode}' and hierarchy_1 = '{accessAreaFromCellNode}' and vendor = '{vendorFromCellNode}' and rat = {ratIdFromCellNode} and DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30']]></SqlTest>
+	<Validate>failures = sqlFailures</Validate> 
+
+	<SqlTest success_raw="false" instruction="use:ratIdFromCellNode"><![CDATA[DECLARE @hier321Id unsigned bigint DECLARE @hier3Id unsigned bigint SELECT @hier321Id = ( SELECT top 1 hier321_id FROM dim_e_sgeh_hier321 WHERE vendor = '{vendorFromCellNode}' AND hierarchy_1 = '{accessAreaFromCellNode}' AND hierarchy_3 = '{controllerFromCellNode}' )  SELECT @hier3Id = ( SELECT top 1 hier3_id FROM dim_e_sgeh_hier321 WHERE vendor = '{vendorFromCellNode}' AND hierarchy_1 = '{accessAreaFromCellNode}' AND hierarchy_3 = '{controllerFromCellNode}' ) IF @hier321Id IS NULL SELECT @hier321Id = CONVERT(BIGINT,'{accessAreaFromCellNode}') IF @hier3Id IS NULL SELECT @hier3Id = CONVERT(BIGINT,'{controllerFromCellNode}') SELECT SUM(no_of_successes) AS 'sqlSuccesses' FROM EVENT_E_LTE_imsi_suc_raw WHERE hier321_id = @hier321Id AND hier3_id = @hier3Id AND rat = {ratIdFromCellNode} and imsi = {-master-imsi-} and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00']]></SqlTest> 
+	<SqlTest success_raw="true" instruction="use:ratIdFromCellNode"><![CDATA[SELECT count(*) AS 'sqlSuccesses' FROM EVENT_E_LTE_suc_raw WHERE vendor = '{vendorFromCellNode}' AND hierarchy_1 = '{accessAreaFromCellNode}' AND hierarchy_3 = '{controllerFromCellNode}' AND rat = {ratIdFromCellNode} and imsi = {-master-imsi-} and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00']]></SqlTest>
+	<Validate>successes = sqlSuccesses</Validate>  
+</RepeatValidation> 
+<RepeatDrillDown instruction="all">10</RepeatDrillDown> 
+<PassToDrillDown id="10">failures,cellNode,accessAreaFromCellNode,controllerFromCellNode,vendorFromCellNode,ratIdFromCellNode</PassToDrillDown>
+</TestCase>
+
+
+<TestCase id="10">
+<PreCondition>9.failures > 0</PreCondition>
+<MaxRowCount>100</MaxRowCount>
+<Direction>Drill on Failures</Direction> 
+<Url><![CDATA[SUBSCRIBER/SUBBI/CELL?dateFrom=10072014&dateTo=10072014&timeFrom=1245&timeTo=1345&node={9.cellNode}&type=IMSI&imsi={-master-imsi-}&display=grid&tzOffset=+0100&maxRows=500]]></Url> 
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?node={9.cellNode}&type=IMSI&imsi={-master-imsi-}&display=grid&tzOffset=%2B0000&dataTimeFrom=1415491200000&dataTimeTo=1416096000000&userName=admin&url=SUBSCRIBER/SUBBI/CELL&maxRows=0]]></CSVUrl>
+<JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventIdDesc,8:eventResDesc,9:causeProtDesc,10:causeCodeID,11:causeCodeDesc,12:subCauseCodeID,13:subCauseCodeDesc,14:sgsnMme,15:ratDesc,16:controller,18:accessArea,19:vendor,57:apn,76:ratId</JSONVariables>  
+<RepeatValidation instruction="all"> 
+	  <SqlTest instruction="Use:ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {-master-imsi-} and tac = {tac} and event_time = '{eventTime}' and cause_code = {causeCodeID} and subcause_code = {subCauseCodeID} and hierarchy_1 = '{9.accessAreaFromCellNode}' and hierarchy_3 = '{9.controllerFromCellNode}' and vendor = '{9.vendorFromCellNode}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00']]></SqlTest>
+ 	<Validate>tac = sqlTac,sgsnMme = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,vendor = sqlVendor</Validate>
+</RepeatValidation>
+	<Validate>sort{eventTime} = desc</Validate> 
+	<Validate>9.failures = count{eventTime}</Validate>
+</TestCase>
+
+
+<TestCase id="11">
+<Direction>Select Terminal View</Direction>
+<Url><![CDATA[SUBSCRIBER/SUBBI/TERMINAL?dateFrom=03072014&dateTo=10072014&timeFrom=0100&timeTo=0100&type=IMSI&imsi={-master-imsi-}&display=grid&tzOffset=+0100&maxRows=500]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?type=IMSI&imsi={-master-imsi-}&display=grid&tzOffset=+0000&dataTimeFrom=1415491200000&dataTimeTo=1416096000000&userName=admin&url=SUBSCRIBER/SUBBI/TERMINAL&maxRows=0]]></CSVUrl>
+<JSONVariables>1:imsi,2:manuf,3:model,4:tac,5:band,6:imeisv,7:failures,8:successes,9:totalEvents,10:firstSeen,11:lastSeen</JSONVariables>  
+<RepeatValidation instruction="all"> 
+	<SqlTest instruction="plus:sgeh"><![CDATA[select count(*) as 'sqlFailures' from event_e_lte_err_raw where imsi = {-master-imsi-} and tac = {tac} and DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30']]></SqlTest> 
+	<Validate>failures = sqlFailures</Validate> 
+
+	<SqlTest success_raw="false" instruction="plus:sgeh"><![CDATA[select sum(no_of_successes) as 'sqlSuccesses' from event_e_lte_imsi_suc_raw where imsi = {-master-imsi-} and tac = {tac} and DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30']]></SqlTest>
+	<SqlTest success_raw="true" instruction="plus:sgeh"><![CDATA[select count(*) as 'sqlSuccesses' from event_e_lte_suc_raw where imsi = {-master-imsi-} and tac = {tac} and DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30']]></SqlTest>
+	<Validate>successes = sqlSuccesses</Validate>  
+</RepeatValidation> 
+<RepeatDrillDown instruction="all">12</RepeatDrillDown> 
+<PassToDrillDown id="12">failures,tac,imsi,imeisv</PassToDrillDown>
+</TestCase>
+
+<TestCase id="12">
+<PreCondition>11.failures > 0</PreCondition>
+<MaxRowCount>100</MaxRowCount>
+<Direction>Drill on Failures</Direction> 
+<Url><![CDATA[SUBSCRIBER/SUBBI/TERMINAL?dateFrom=03072014&dateTo=10072014&timeFrom=0100&timeTo=0100&type=IMSI&imsi={-master-imsi-}&display=grid&tzOffset=+0100&maxRows=500&tac={11.tac}&imsi={11.imsi}&imeisv={11.imeisv}]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?type=IMSI&imsi={-master-imsi-}&display=grid&tzOffset=%2B0000&tac={11.tac}&imsi={11.imsi}&imeisv={11.imeisv}&dataTimeFrom=1415491200000&dataTimeTo=1416096000000&userName=admin&url=SUBSCRIBER/SUBBI/TERMINAL&maxRows=0]]></CSVUrl>
+<JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventIdDesc,8:eventResDesc,9:causeProtDesc,10:causeCodeID,11:causeCodeDesc,12:subCauseCodeID,13:subCauseCodeDesc,14:sgsnMme,15:ratDesc,16:controller,18:accessArea,19:vendor,57:apn,76:ratId</JSONVariables>  
+<RepeatValidation instruction="all"> 
+	  <SqlTest instruction="Use:ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {-master-imsi-} and tac = {11.tac} and imsi={11.imsi} and imeisv={11.imeisv} and event_time = '{eventTime}' and cause_code = {causeCodeID} and subcause_code = {subCauseCodeID} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00']]></SqlTest>
+ 	<Validate>tac = sqlTac,sgsnMme = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,vendor = sqlVendor</Validate>
+</RepeatValidation> 
+	<Validate>sort{eventTime} = desc</Validate>
+	<Validate>11.failures = count{eventTime}</Validate>
+</TestCase>
+
+
+<TestCase id="13">
+<Direction>Select Tau View</Direction> 
+<Url><![CDATA[SUBSCRIBER/SUBBI/TAU?dateFrom=03072014&dateTo=10072014&timeFrom=0100&timeTo=0100&type=IMSI&imsi={-master-imsiTau}&display=chart&tzOffset=+0100&maxRows=500]]></Url> 
+<JSONVariables>1:failures,2:successes,3:tauNode,3:tracFromTauNode,3:tauDescFromTauNode</JSONVariables>  
+<RepeatValidation instruction="all"> 
+	<SqlTest><![CDATA[select count(*) as 'sqlFailures' from event_e_lte_err_raw where imsi = {-master-imsiTau} and trac = {tracFromTauNode} and event_subtype_id = (select event_subtype_id from dim_e_lte_event_subtype where event_subtype_id_desc = '{tauDescFromTauNode}') and event_id = 8 and DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30']]></SqlTest> 
+	<Validate>failures = sqlFailures</Validate> 
+
+	<SqlTest success_raw="false"><![CDATA[select sum(no_of_successes) as 'sqlSuccesses' from event_e_lte_imsi_suc_raw where imsi = {-master-imsiTau} and trac = {tracFromTauNode} and event_subtype_id = (select event_subtype_id from dim_e_lte_event_subtype where event_subtype_id_desc = '{tauDescFromTauNode}') and event_id = 8 and DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30']]></SqlTest> 
+	<SqlTest success_raw="true"><![CDATA[select count(*) as 'sqlSuccesses' from event_e_lte_suc_raw where imsi = {-master-imsiTau} and trac = {tracFromTauNode} and event_subtype_id = (select event_subtype_id from dim_e_lte_event_subtype where event_subtype_id_desc = '{tauDescFromTauNode}') and event_id = 8 and DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30']]></SqlTest> 
+	<Validate>successes = sqlSuccesses</Validate>  
+</RepeatValidation> 
+<RepeatDrillDown instruction="all">14</RepeatDrillDown> 
+<PassToDrillDown id="14">failures,tauNode,tracFromTauNode,tauDescFromTauNode</PassToDrillDown>
+</TestCase>
+
+
+<TestCase id="14">
+<PreCondition>13.failures > 0</PreCondition>
+<MaxRowCount>100</MaxRowCount>
+<Direction>Drill on Failures</Direction>
+<Url><![CDATA[SUBSCRIBER/SUBBI/TAU?time=720&node={13.tauNode}&type=IMSI&imsi={-master-imsiTau}&display=grid&tzOffset=+0100&maxRows=500]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?node={13.tauNode}&type=IMSI&imsi={-master-imsiTau}&display=grid&tzOffset=%2B0000&dataTimeFrom=1416121200000&dataTimeTo=1416164400000&userName=admin&url=SUBSCRIBER/SUBBI/TAU&maxRows=0
+]]></CSVUrl>
+<JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventIdDesc,8:eventResDesc,9:causeProtDesc,10:causeCodeID,11:causeCodeDesc,12:subCauseCodeID,13:subCauseCodeDesc,14:sgsnMme,15:ratDesc,16:controller,18:accessArea,19:vendor,57:apn,76:ratId,101:qciErrOne,102:qciErrTwo,103:qciErrThree,104:qciErrFour,105:qciErrFive,106:qciErrSix,107:qciErrSeven,108:qciErrEight,109:qciErrNine,110:qciErrTen</JSONVariables>  
+<RepeatValidation instruction="all"> 
+	  <SqlTest instruction="Use:ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor', qci_err_1 as 'sqlQciOne', qci_err_2 as 'sqlQciTwo', qci_err_3 as 'sqlQciThree', qci_err_4 as 'sqlQciFour', qci_err_5 as 'sqlQciFive', qci_err_6 as 'sqlQciSix', qci_err_7 as 'sqlQciSeven', qci_err_8 as 'sqlQciEight', qci_err_9 as 'sqlQciNine', qci_err_10 as 'sqlQciTen' from event_e_lte_err_raw where imsi = {imsi} and trac = {13.tracFromTauNode} and event_subtype_id = (select event_subtype_id from dc.dim_e_lte_event_subtype where event_subtype_id_desc = '{13.tauDescFromTauNode}') and event_time = '{eventTime}' and cause_code = {causeCodeID} and subcause_code = {subCauseCodeID} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00']]></SqlTest>
+ 	<Validate>tac = sqlTac,sgsnMme = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,vendor = sqlVendor,qciErrOne = sqlQciOne,qciErrTwo = sqlQciTwo,qciErrThree = sqlQciThree,qciErrFour = sqlQciFour,qciErrFive = sqlQciFive,qciErrSix = sqlQciSix,qciErrSeven = sqlQciSeven,qciErrEight = sqlQciEight,qciErrNine = sqlQciNine,qciErrTen = sqlQciTen</Validate>
+</RepeatValidation>
+	<Validate>sort{eventTime} = desc</Validate> 
+	<Validate>13.failures = count{eventTime}</Validate>
+</TestCase>
+
+
+<TestCase id="15">
+<Direction>Select Handover View</Direction> 
+<Url><![CDATA[SUBSCRIBER/SUBBI/HANDOVER?time=1440&type=IMSI&imsi={-master-imsiHandover}&display=chart&tzOffset=+0100&maxRows=500]]></Url> 
+<JSONVariables>1:failures,2:successes,3:handoverNode,3:accessAreaFromHandoverNode,3:vendorFromHandoverNode</JSONVariables>  
+<RepeatValidation instruction="all"> 
+	<SqlTest><![CDATA[select count(*) as 'sqlFailures' from event_e_lte_err_raw where imsi = {-master-imsiHandover} and event_id = 7 and vendor = '{vendorFromHandoverNode}' and hierarchy_1 = '{accessAreaFromHandoverNode}' and DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30']]></SqlTest>
+	<Validate>failures = sqlFailures</Validate> 
+
+	<SqlTest success_raw="false"><![CDATA[select sum(no_of_successes) as 'sqlSuccesses' from event_e_lte_imsi_suc_raw where imsi = {-master-imsiHandover} and event_id = 7 and (hier321_id in (select hier321_id from dim_e_lte_hier321 where vendor ='{vendorFromHandoverNode}' and hierarchy_1 = '{accessAreaFromHandoverNode}') or hier321_id = convert(int,'{accessAreaFromHandoverNode}')) and  DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30']]></SqlTest> 
+	<SqlTest success_raw="true"><![CDATA[select count(*) as 'sqlSuccesses' from event_e_lte_suc_raw where imsi = {-master-imsiHandover} and event_id = 7 and (hier321_id in (select hier321_id from dim_e_lte_hier321 where vendor ='{vendorFromHandoverNode}' and hierarchy_1 = '{accessAreaFromHandoverNode}') or hier321_id = convert(int,'{accessAreaFromHandoverNode}')) and  DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30']]></SqlTest> 
+	<Validate>successes = sqlSuccesses</Validate>  
+</RepeatValidation> 
+<RepeatDrillDown instruction="all">16</RepeatDrillDown> 
+<PassToDrillDown id="16">failures,successes,handoverNode,accessAreaFromHandoverNode,vendorFromHandoverNode</PassToDrillDown>
+</TestCase>
+
+
+<TestCase id="16">
+<PreCondition>15.failures > 0</PreCondition>
+<MaxRowCount>100</MaxRowCount>
+<Direction>Drill on Failures</Direction> 
+<Url><![CDATA[SUBSCRIBER/SUBBI/HANDOVER?dateFrom=09072014&dateTo=10072014&timeFrom=1600&timeTo=1600&node={15.handoverNode}&type=IMSI&imsi={-master-imsiHandover}&display=grid&tzOffset=+0100&maxRows=500]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?node={15.handoverNode}&type=IMSI&imsi={-master-imsiHandover}&display=grid&tzOffset=%2B0000&dataTimeFrom=1415491200000&dataTimeTo=1416096000000&userName=admin&url=SUBSCRIBER/SUBBI/HANDOVER&maxRows=0
+]]></CSVUrl> 
+<JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventIdDesc,8:eventResDesc,9:causeProtDesc,10:causeCodeID,11:causeCodeDesc,12:subCauseCodeID,13:subCauseCodeDesc,14:sgsnMme,15:ratDesc,16:controller,18:accessArea,19:vendor,57:apn,76:ratId,101:qciErrOne,102:qciErrTwo,103:qciErrThree,104:qciErrFour,105:qciErrFive,106:qciErrSix,107:qciErrSeven,108:qciErrEight,109:qciErrNine,110:qciErrTen</JSONVariables>  
+<RepeatValidation instruction="all"> 
+	  <SqlTest instruction="Use:ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor', qci_err_1 as 'sqlQciOne', qci_err_2 as 'sqlQciTwo', qci_err_3 as 'sqlQciThree', qci_err_4 as 'sqlQciFour', qci_err_5 as 'sqlQciFive', qci_err_6 as 'sqlQciSix', qci_err_7 as 'sqlQciSeven', qci_err_8 as 'sqlQciEight', qci_err_9 as 'sqlQciNine', qci_err_10 as 'sqlQciTen' from event_e_lte_err_raw where imsi = {imsi} and tac = {tac} and event_time = '{eventTime}' and cause_code = {causeCodeID} and subcause_code = {subCauseCodeID} and hierarchy_1 = '{15.accessAreaFromHandoverNode}' and hierarchy_3 = '{controller}' and vendor = '{15.vendorFromHandoverNode}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00']]></SqlTest>
+ 	<Validate>tac = sqlTac,sgsnMme = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,vendor = sqlVendor,qciErrOne = sqlQciOne,qciErrTwo = sqlQciTwo,qciErrThree = sqlQciThree,qciErrFour = sqlQciFour,qciErrFive = sqlQciFive,qciErrSix = sqlQciSix,qciErrSeven = sqlQciSeven,qciErrEight = sqlQciEight,qciErrNine = sqlQciNine,qciErrTen = sqlQciTen</Validate>
+</RepeatValidation>
+	<Validate>sort{eventTime} = desc</Validate> 
+	<Validate>15.failures = count{eventTime}</Validate>
+</TestCase>
+
+</TestSuite>
+

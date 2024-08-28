@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<TestCase id="1">
+   <Direction>Launch -> Controller -> All Cells -> DownLink Throughput -> Map</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/USER_PLANE/KPI_MAP?node={-master-UserPlaneControllerNode}&type=BSC&time={time}&tzOffset=+0000]]></Url>
+   <JSONVariables>rncName:controller,vendor:vendor,kpis.Downlink Throughput:DLTP,cellName:cellId</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[SELECT CAST(ISNULL(ROUND(AVG(THROUGHPUT),4),0) AS NUMERIC(16,4)) AS 'sqlDLTP' FROM dc.EVENT_E_USER_PLANE_TCP_RAW WHERE FIVE_MIN_AGG_TIME >= '2014-12-01 08:00' AND FIVE_MIN_AGG_TIME < '2014-12-01 08:15'
+   AND DOWNLINK = 1 AND HIER321_ID IN (SELECT HIER321_ID FROM DIM_E_SGEH_HIER321_CELL WHERE CELL_ID = '{cellId}') AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+   <Validate precision="12">DLTP = sqlDLTP</Validate>
+   </RepeatValidation>
+   <RepeatDrillDown instruction="all">2</RepeatDrillDown>
+   <PassToDrillDown id="2">controller,vendor</PassToDrillDown>
+</TestCase>
+
+<TestCase id="2">
+   <Direction>Chart</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/USER_PLANE/KPI_CHART?time={time}&tzOffset=+0000&node={-master-UserPlaneControllerNode}&type=BSC]]></Url>
+   <JSONVariables>kpiTime:kpiTimeInMilliseconds,kpiTime:fiveMinAggTime,kpiTime:fiveMinDateTime,Downlink Throughput:DLTPTotal,Downlink Throughput Samples:DLTPTotalSample</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[SELECT CAST(ISNULL(ROUND(AVG(THROUGHPUT),4),0) AS NUMERIC(16,4))  AS 'sqlDLTP', COUNT(THROUGHPUT) AS 'sqlDLTPSAMPLE' FROM dc.EVENT_E_USER_PLANE_TCP_RAW WHERE {fiveMinAggTime} AND DOWNLINK = 1 AND HIER3_ID IS NOT NULL AND ISNULL(TAC,-1) NOT IN(SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC') AND HIER3_ID in (Select distinct HIER3_ID from DIM_E_SGEH_HIER321 where HIERARCHY_3 = '{1.controller}' AND VENDOR='{1.vendor}' AND rat = 1)]]></SqlTest>
+   <Validate precision="4">DLTPTotal = sqlDLTP,DLTPTotalSample = sqlDLTPSAMPLE</Validate>
+   </RepeatValidation>
+   <RepeatDrillDown instruction="all">3,4,5,6</RepeatDrillDown>
+   <PassToDrillDown id="3">kpiTimeInMilliseconds,fiveMinAggTime,fiveMinDateTime,1.controller,1.vendor</PassToDrillDown>
+   <PassToDrillDown id="4">kpiTimeInMilliseconds,fiveMinAggTime,fiveMinDateTime,1.controller,1.vendor</PassToDrillDown>
+   <PassToDrillDown id="5">kpiTimeInMilliseconds,fiveMinAggTime,fiveMinDateTime,1.controller,1.vendor</PassToDrillDown>
+   <PassToDrillDown id="6">kpiTimeInMilliseconds,fiveMinAggTime,fiveMinDateTime,1.controller,1.vendor</PassToDrillDown>
+   <Validate>sort{kpiTimeInMilliseconds} = asc</Validate>
+</TestCase>
+
+
+<TestCase id="3">
+   <PreConditionSql><![CDATA[select count(*) as 'sqlCount' from EVENT_E_RAN_SESSION_RAW where {2.fiveMinDateTime}]]></PreConditionSql>
+   <PreCondition><![CDATA[sqlCount > 0]]></PreCondition>
+   <Direction>Chart By Options -> RSCP</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/USER_PLANE/KPI_CHART/KPI_DRILL?time={time}&kpiStartTime={2.kpiTimeInMilliseconds}&tzOffset=+0000&node={-master-UserPlaneControllerNode}&type=BSC&drilltype=RSCP_AVG&kpiId=1]]></Url>
+   <JSONVariables>DrillBy:RSCP,Value:DLTP,Samples:DLTPSample</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[SELECT CAST(ISNULL(ROUND(AVG(THROUGHPUT),4),0) AS NUMERIC(16,4)) AS 'sqlDLTP', COUNT(THROUGHPUT) AS 'sqlDLTPSAMPLE' FROM EVENT_E_USER_PLANE_TCP_RAW a, EVENT_E_RAN_SESSION_RAW b WHERE a.HIER3_ID = b.START_HIER3_ID AND a.IMSI = b.IMSI
+   AND Downlink = 1 AND a.HIER3_ID IS NOT NULL AND a.{2.fiveMinAggTime} AND b.{2.fiveMinDateTime} AND RSCP_AVG = {RSCP} AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC')
+   AND a.HIER3_ID in (Select distinct HIER3_ID from DIM_E_SGEH_HIER321 where HIERARCHY_3 = '{1.controller}' AND VENDOR='{1.vendor}' AND rat = 1)]]></SqlTest>
+   <Validate precision="4">DLTP = sqlDLTP,DLTPSample = sqlDLTPSAMPLE</Validate>
+   </RepeatValidation>
+</TestCase>
+
+<TestCase id="4">
+   <PreConditionSql><![CDATA[select count(*) as 'sqlCount' from EVENT_E_RAN_SESSION_RAW where {2.fiveMinDateTime}]]></PreConditionSql>
+   <PreCondition><![CDATA[sqlCount > 0]]></PreCondition>
+   <Direction>Chart By Options -> EcNo</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/USER_PLANE/KPI_CHART/KPI_DRILL?time={time}&kpiStartTime={2.kpiTimeInMilliseconds}&tzOffset=+0000&node={-master-UserPlaneControllerNode}&type=BSC&drilltype=ECNO_AVG&kpiId=1]]></Url>
+   <JSONVariables>DrillBy:ECNO,Value:DLTP,Samples:DLTPSample</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[SELECT CAST(ISNULL(ROUND(AVG(THROUGHPUT),4),0) AS NUMERIC(16,4)) AS 'sqlDLTP', COUNT(THROUGHPUT) AS 'sqlDLTPSAMPLE' FROM EVENT_E_USER_PLANE_TCP_RAW a, EVENT_E_RAN_SESSION_RAW b WHERE a.HIER3_ID = b.START_HIER3_ID AND a.IMSI = b.IMSI
+   AND Downlink = 1 AND a.HIER3_ID IS NOT NULL AND a.{2.fiveMinAggTime} AND b.{2.fiveMinDateTime} AND ECNO_AVG = {ECNO} AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC')
+   AND a.HIER3_ID in (Select distinct HIER3_ID from DIM_E_SGEH_HIER321 where HIERARCHY_3 = '{1.controller}' AND VENDOR='{1.vendor}' AND rat = 1)]]></SqlTest>
+   <Validate precision="4">DLTP = sqlDLTP,DLTPSample = sqlDLTPSAMPLE</Validate>
+   </RepeatValidation>
+</TestCase>
+
+<TestCase id="5">
+   <PreConditionSql><![CDATA[select count(*) as 'sqlCount' from EVENT_E_RAN_SESSION_RAW where {2.fiveMinDateTime}]]></PreConditionSql>
+   <PreCondition><![CDATA[sqlCount > 0]]></PreCondition>
+   <Direction>Chart By Options -> UL Interference</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/USER_PLANE/KPI_CHART/KPI_DRILL?time={time}&kpiStartTime={2.kpiTimeInMilliseconds}&tzOffset=+0000&node={-master-UserPlaneControllerNode}&type=BSC&drilltype=UL_INTERFERENCE_AVG&kpiId=1]]></Url>
+   <JSONVariables>DrillBy:UL,Value:DLTP,Samples:DLTPSample</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[SELECT CAST(ISNULL(ROUND(AVG(THROUGHPUT),4),0) AS NUMERIC(16,4)) AS 'sqlDLTP', COUNT(THROUGHPUT) AS 'sqlDLTPSAMPLE' FROM EVENT_E_USER_PLANE_TCP_RAW a, EVENT_E_RAN_SESSION_RAW b WHERE a.HIER3_ID = b.START_HIER3_ID AND a.IMSI = b.IMSI
+   AND Downlink = 1 AND a.HIER3_ID IS NOT NULL AND a.{2.fiveMinAggTime} AND b.{2.fiveMinDateTime} AND UL_INTERFERENCE_AVG = {UL} AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC')
+   AND a.HIER3_ID in (Select distinct HIER3_ID from DIM_E_SGEH_HIER321 where HIERARCHY_3 = '{1.controller}' AND VENDOR='{1.vendor}' AND rat = 1)]]></SqlTest>
+   <Validate precision="4">DLTP = sqlDLTP,DLTPSample = sqlDLTPSAMPLE</Validate>
+   </RepeatValidation>
+</TestCase>
+
+<TestCase id="6">
+   <PreConditionSql><![CDATA[select count(*) as 'sqlCount' from EVENT_E_RAN_SESSION_RAW where {2.fiveMinDateTime}]]></PreConditionSql>
+   <PreCondition><![CDATA[sqlCount > 0]]></PreCondition>
+   <Direction>Chart By Options -> HS Users in Cell</Direction>
+   <Url><![CDATA[SESSION_BROWSER/SESSION_KPI/USER_PLANE/KPI_CHART/KPI_DRILL?time={time}&kpiStartTime={2.kpiTimeInMilliseconds}&tzOffset=+0000&node={-master-UserPlaneControllerNode}&type=BSC&drilltype=HSDSCH_AVG_USERS&kpiId=1]]></Url>
+   <JSONVariables>DrillBy:HSDSCH,Value:DLTP,Samples:DLTPSample</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[SELECT CAST(ISNULL(ROUND(AVG(THROUGHPUT),4),0) AS NUMERIC(16,4)) AS 'sqlDLTP', COUNT(THROUGHPUT) AS 'sqlDLTPSAMPLE' FROM EVENT_E_USER_PLANE_TCP_RAW a, EVENT_E_RAN_SESSION_RAW b WHERE a.HIER3_ID = b.START_HIER3_ID AND a.IMSI = b.IMSI
+   AND Downlink = 1 AND a.HIER3_ID IS NOT NULL AND a.{2.fiveMinAggTime} AND b.{2.fiveMinDateTime} AND HSDSCH_AVG_USERS = {HSDSCH} AND ISNULL(TAC,-1) NOT IN (SELECT TAC FROM dc.GROUP_TYPE_E_TAC WHERE GROUP_NAME = 'EXCLUSIVE_TAC')
+   AND a.HIER3_ID in (Select distinct HIER3_ID from DIM_E_SGEH_HIER321 where HIERARCHY_3 = '{1.controller}' AND VENDOR='{1.vendor}' AND rat = 1)]]></SqlTest>
+   <Validate precision="4">DLTP = sqlDLTP,DLTPSample = sqlDLTPSAMPLE</Validate>
+   </RepeatValidation>
+</TestCase>
+
+</TestSuite>

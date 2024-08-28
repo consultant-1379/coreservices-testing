@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+<!--__________________________________________________________Grid View__________________________________________________________-->
+
+<TestCase id="1">
+<Direction>Launch -> 4G Radio Network -> Network Event Volume -> Call Failure(4G)</Direction>
+<Url><![CDATA[NETWORK/LTE_CFA_EVENT_VOLUME/NETWORK_EVENT_VOLUME?time=10080&display=grid&tzOffset=%2B0530&maxRows=500]]></Url>
+<JSONVariables>1:eventVolumeTime,2:rrcConnSetup,3:soneSigConnSetup,4:initialCtxtSetup,5:erabSetup,6:ueCtxtRelease</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[ select isnull(count(*),0) as 'sqlRrcConnSetup' from EVENT_E_LTE_CFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.EVENT_ID = 4097 ]]></SqlTest> 
+<Validate>rrcConnSetup = sqlRrcConnSetup</Validate>
+
+<SqlTest><![CDATA[ select isnull(count(*),0) as 'sqlSoneSigConnSetup' from EVENT_E_LTE_CFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.EVENT_ID = 4098 ]]></SqlTest> 
+<Validate>soneSigConnSetup=sqlSoneSigConnSetup</Validate>
+
+<SqlTest><![CDATA[ select isnull(count(*),0) as 'sqlInitialCtxtSetup' from EVENT_E_LTE_CFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.EVENT_ID = 4106 ]]></SqlTest> 
+<Validate>initialCtxtSetup=sqlInitialCtxtSetup</Validate>
+
+<SqlTest><![CDATA[ select isnull(count(*),0) as 'sqlErabSetup' from EVENT_E_LTE_CFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.EVENT_ID = 4099 ]]></SqlTest> 
+<Validate>erabSetup=sqlErabSetup</Validate>
+
+<SqlTest><![CDATA[ select isnull(count(*),0) as 'sqlUeCtxtRelease' from EVENT_E_LTE_CFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.EVENT_ID = 4125 ]]></SqlTest> 
+<Validate>ueCtxtRelease=sqlUeCtxtRelease</Validate>
+
+</RepeatValidation>
+<Validate>sort{eventVolumeTime} = asc</Validate>
+<RepeatDrillDown instruction="all">2</RepeatDrillDown>
+</TestCase>
+
+<!--__________________________________________________________Chart View__________________________________________________________-->
+
+ <TestCase id="2">
+<Direction>Click on Chart view</Direction>
+<Url><![CDATA[NETWORK/LTE_CFA_EVENT_VOLUME/NETWORK_EVENT_VOLUME?time=10080&display=chart&tzOffset=%2B0530&maxRows=500]]></Url>
+<JSONVariables>1:eventVolumeTime,2:rrcConnSetup,3:soneSigConnSetup,4:initialCtxtSetup,5:erabSetup,6:ueCtxtRelease</JSONVariables>
+<RepeatValidation instruction="all">
+
+<SqlTest><![CDATA[ select isnull(count(*),0) as 'sqlRrcConnSetup' from EVENT_E_LTE_CFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.EVENT_ID = 4097 ]]></SqlTest> 
+<Validate>rrcConnSetup = sqlRrcConnSetup</Validate>
+
+<SqlTest><![CDATA[ select isnull(count(*),0) as 'sqlSoneSigConnSetup' from EVENT_E_LTE_CFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.EVENT_ID = 4098 ]]></SqlTest> 
+<Validate>soneSigConnSetup=sqlSoneSigConnSetup</Validate>
+
+<SqlTest><![CDATA[ select isnull(count(*),0) as 'sqlInitialCtxtSetup' from EVENT_E_LTE_CFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.EVENT_ID = 4106 ]]></SqlTest> 
+<Validate>initialCtxtSetup=sqlInitialCtxtSetup</Validate>
+
+<SqlTest><![CDATA[ select isnull(count(*),0) as 'sqlErabSetup' from EVENT_E_LTE_CFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.EVENT_ID = 4099 ]]></SqlTest> 
+<Validate>erabSetup=sqlErabSetup</Validate>
+
+<SqlTest><![CDATA[ select isnull(count(*),0) as 'sqlUeCtxtRelease' from EVENT_E_LTE_CFA_ERR_RAW as rawview where {eventVolumeTime} and ISNULL(rawview.TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and rawview.EVENT_ID = 4125 ]]></SqlTest> 
+<Validate>ueCtxtRelease=sqlUeCtxtRelease</Validate>
+
+</RepeatValidation>
+<Validate>sort{eventVolumeTime} = asc</Validate>
+
+</TestCase>
+
+</TestSuite>

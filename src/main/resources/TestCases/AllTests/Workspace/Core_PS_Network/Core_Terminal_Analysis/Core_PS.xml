@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+
+	<TestCase id="1">
+		<Direction>Launch -> Core(PS) Network -> Core Terminal Analysis -> Core PS (Most Frequent Signaling Summary)</Direction>
+		<Url><![CDATA[TERMINAL/TERMINAL_ANALYSIS/MOST_POPULAR_EVENT_SUMMARY?time=30&display=grid&tzOffset=+0530&maxRows=30]]></Url>
+		<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&dataTimeFrom=1415625300000&dataTimeTo=1415646900000&userName=admin&url=TERMINAL/TERMINAL_ANALYSIS/MOST_POPULAR_EVENT_SUMMARY&maxRows=0]]></CSVUrl>		
+		<JSONVariables>1:rank,2:tac,3:manufacturer,4:model,5:failures,6:success,7:totalEvents,8:successRatio,9:band</JSONVariables>
+		<RepeatValidation instruction="all">
+		    <SqlTest instruction="plus:sgeh"><![CDATA[select count(*) as 'sqlFailures' from event_e_lte_err_raw where tac = {tac} and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+		    <Validate>failures = sqlFailures</Validate>
+		    <SqlTest><![CDATA[SELECT rank as 'sqlRank', totalEvents as 'sqlTotalEvents' FROM ( SELECT totalEvents, rank() over (ORDER BY totalEvents DESC) AS rank, tac FROM ( SELECT SUM(no_of_successes) + SUM(no_of_errors) AS totalEvents, tac FROM ( SELECT COUNT(*) AS no_of_errors, 0 AS no_of_successes, tac FROM ( SELECT tac FROM event_e_lte_err_raw where tac not in (select tac from group_type_e_tac where group_name = 'Exclusive_Tac') AND datetime_id >= '2015-03-24 12:15' AND datetime_id < '2015-03-24 12:45' UNION ALL SELECT tac FROM event_e_sgeh_err_raw where tac not in (select tac from group_type_e_tac where group_name = 'Exclusive_Tac') AND datetime_id >= '2015-03-24 12:15' AND datetime_id < '2015-03-24 12:45' ) rawView GROUP BY tac UNION ALL SELECT 0 AS no_of_errors, SUM(no_of_successes) AS no_of_successes, tac FROM ( SELECT no_of_successes, tac FROM EVENT_E_lte_MANUF_TAC_SUC_15MIN where tac not in (select tac from group_type_e_tac where group_name = 'Exclusive_Tac') AND datetime_id >= '2015-03-24 12:15' AND datetime_id < '2015-03-24 12:45' UNION ALL SELECT no_of_successes, tac FROM EVENT_E_sgeh_MANUF_TAC_SUC_15MIN where tac not in (select tac from group_type_e_tac where group_name = 'Exclusive_Tac') AND datetime_id >= '2015-03-24 12:15' AND datetime_id < '2015-03-24 12:45' ) sucCount GROUP BY tac) subCounts GROUP BY tac) countsView ) rankView WHERE tac = {tac}]]></SqlTest>
+		    <Validate><![CDATA[rank <= 30]]></Validate>
+		    <Validate>rank = sqlRank</Validate>
+		    <Validate>totalEvents = sqlTotalEvents</Validate>
+		    <SqlTest success_raw="false" instruction="plus:sgeh"><![CDATA[select sum(NO_OF_SUCCESSES) as 'sqlSuccess' from EVENT_E_LTE_IMSI_SUC_RAW where tac = {tac} and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+		    <SqlTest success_raw="true" instruction="plus:sgeh"><![CDATA[select count(*) as 'sqlSuccess' from EVENT_E_LTE_SUC_RAW where tac = {tac} and datetime_id >= '2014-06-11 12:30' and datetime_id < '2014-06-11 13:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+		    <Validate>success = sqlSuccess</Validate>
+		    <Validate>sqlFailures + sqlSuccess = totalEvents</Validate>      
+		    <Validate>( sqlSuccess / totalEvents ) * 100 = successRatio</Validate>
+		</RepeatValidation>
+		<Validate>sort{rank} = asc</Validate>
+    	<Validate>sort{totalEvents} = desc</Validate>
+		<RepeatDrillDown instruction="all">2,3,4,5</RepeatDrillDown> 
+	</TestCase>
+
+	<TestCase id="2">
+		<Direction>Select Most Frequent Signalling View</Direction> 
+		<Url><![CDATA[TERMINAL/TERMINAL_ANALYSIS/MOST_POPULAR?time=30&display=grid&tzOffset=+0100&maxRows=30]]></Url> 
+		<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0900&dataTimeFrom=1415868300000&dataTimeTo=1415870100000&userName=admin&url=TERMINAL/TERMINAL_ANALYSIS/MOST_POPULAR&maxRows=0]]></CSVUrl>
+		<JSONVariables>1:rank,2:tac,3:manuf,4:model,5:totalEvents,6:band</JSONVariables>  
+		<RepeatValidation instruction="all"> 
+			<SqlTest instruction="plus:sgeh"><![CDATA[select count(*) as 'sqlFailures' from event_e_lte_err_raw where tac = {tac} and DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>  
+			<Validate><![CDATA[rank <= 30]]></Validate>
+			<SqlTest success_raw="false" instruction="plus:sgeh"><![CDATA[select sum(no_of_successes) as 'sqlSuccesses' from event_e_lte_imsi_suc_raw where tac = {tac} and DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest> 
+			<SqlTest success_raw="true" instruction="plus:sgeh"><![CDATA[select count(*) as 'sqlSuccesses' from event_e_lte_suc_raw where tac = {tac} and DATETIME_ID >= '2014-07-14 18:00' and DATETIME_ID < '2014-07-14 18:30' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+			<SqlTest><![CDATA[SELECT rank as 'sqlRank', totalEvents as 'sqlTotalEvents' FROM ( SELECT totalEvents, rank() over (ORDER BY totalEvents DESC) AS rank, tac FROM ( SELECT SUM(no_of_successes) + SUM(no_of_errors) AS totalEvents, tac FROM ( SELECT COUNT(*) AS no_of_errors, 0 AS no_of_successes, tac FROM ( SELECT tac FROM event_e_lte_err_raw where tac not in (select tac from group_type_e_tac where group_name = 'Exclusive_Tac') AND datetime_id >= '2015-03-24 12:15' AND datetime_id < '2015-03-24 12:45' UNION ALL SELECT tac FROM event_e_sgeh_err_raw where tac not in (select tac from group_type_e_tac where group_name = 'Exclusive_Tac') AND datetime_id >= '2015-03-24 12:15' AND datetime_id < '2015-03-24 12:45' ) rawView GROUP BY tac UNION ALL SELECT 0 AS no_of_errors, SUM(no_of_successes) AS no_of_successes, tac FROM ( SELECT no_of_successes, tac FROM EVENT_E_lte_MANUF_TAC_SUC_15MIN where tac not in (select tac from group_type_e_tac where group_name = 'Exclusive_Tac') AND datetime_id >= '2015-03-24 12:15' AND datetime_id < '2015-03-24 12:45' UNION ALL SELECT no_of_successes, tac FROM EVENT_E_sgeh_MANUF_TAC_SUC_15MIN where tac not in (select tac from group_type_e_tac where group_name = 'Exclusive_Tac') AND datetime_id >= '2015-03-24 12:15' AND datetime_id < '2015-03-24 12:45' ) sucCount GROUP BY tac) subCounts GROUP BY tac) countsView ) rankView WHERE tac = {tac}]]></SqlTest>
+		    <Validate><![CDATA[rank <= 30]]></Validate>
+		    <Validate>rank = sqlRank</Validate>
+		    <Validate>totalEvents = sqlTotalEvents</Validate>
+
+			<Validate>sqlSuccesses + sqlFailures = totalEvents</Validate>
+		</RepeatValidation>
+		<Validate>sort{rank} = asc</Validate>
+    	<Validate>sort{totalEvents} = desc</Validate>
+	</TestCase>
+	
+	<TestCase id="3">
+		<Direction>Select Most Attach Failures View</Direction> 
+		<Url><![CDATA[TERMINAL/TERMINAL_ANALYSIS/MOST_ATTACHED_FAILURES?dateFrom=22072014&dateTo=22072014&timeFrom=1345&timeTo=1415&display=grid&tzOffset=+0100&maxRows=30]]></Url> 
+		<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&dataTimeFrom=1415625300000&dataTimeTo=1415646900000&userName=admin&url=TERMINAL/TERMINAL_ANALYSIS/MOST_ATTACHED_FAILURES&maxRows=0]]></CSVUrl>
+		<JSONVariables>1:rank,2:tac,3:manuf,4:model,5:failures,6:band</JSONVariables>  
+		<RepeatValidation instruction="all"> 
+			<SqlTest><![CDATA[SELECT rank AS 'sqlRank', no_of_errors AS 'sqlFailures' FROM ( SELECT tac, no_of_errors, rank() over (ORDER BY no_of_errors DESC) AS rank FROM ( SELECT COUNT(*) AS no_of_errors, tac FROM ( SELECT tac FROM event_e_lte_err_raw WHERE datetime_id >= '2015-03-23 14:15' AND datetime_id < '2015-03-23 14:45' AND tac NOT IN ( SELECT tac FROM group_type_e_tac WHERE group_name = 'EXCLUSIVE_TAC') AND event_id IN (0,5) UNION ALL SELECT tac FROM event_e_sgeh_err_raw WHERE datetime_id >= '2015-03-23 14:15' AND datetime_id < '2015-03-23 14:45' AND tac NOT IN ( SELECT tac FROM group_type_e_tac WHERE group_name = 'EXCLUSIVE_TAC') AND event_id IN (0,5)) errCount GROUP BY tac ) errView ) rankView WHERE tac = {tac}]]></SqlTest>  
+			<Validate>failures = sqlFailures</Validate>
+			<Validate>rank = sqlRank</Validate>
+			 <Validate><![CDATA[rank <= 30]]></Validate>
+		</RepeatValidation>
+		<Validate>sort{rank} = asc</Validate>
+    	<Validate>sort{failures} = desc</Validate>
+		<RepeatDrillDown instruction="all">6</RepeatDrillDown> 
+		<PassToDrillDown id="6">manuf,model,tac,failures</PassToDrillDown>
+	</TestCase>
+
+	
+	<TestCase id="6">
+		<PreCondition>3.failures > 0</PreCondition>
+		<Direction>Drill on Failures</Direction> 
+		<Url><![CDATA[TERMINAL/EVENT_ANALYSIS?dateFrom=04112014&dateTo=04112014&timeFrom=0800&timeTo=0830&display=grid&tzOffset=+0000&maxRows=30&key=ERR&type=TAC&eventID=0,5&MANF={3.manuf}&MODEL={3.model}&tac={3.tac}]]></Url> 
+		<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&key=ERR&type=TAC&eventID=0,5&MANF={3.manuf}&MODEL={3.model}&tac={3.tac}&dataTimeFrom=1415625300000&dataTimeTo=1415646900000&userName=admin&url=TERMINAL/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+		<IgnoredInCsv>72:sysCauseCode,73:sysSubcause,74:sysEventRes,75:sysCauseProt</IgnoredInCsv>
+		<JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventIdDesc,8:eventResDesc,9:causeProtDesc,10:causeCodeID,11:causeCodeDesc,12:subCauseCodeID,13:subCauseCodeDesc,14:SGSNMME,15:ratDesc,16:controller,18:accessArea,19:vendor,57:apn,74:eventResId,75:causeProtId,76:ratId</JSONVariables>  
+		<RepeatValidation instruction="random10"> 
+		    <SqlTest instruction="Use:ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {imsi} and tac = {tac} and event_time = '{eventTime}' and cause_code = {causeCodeID} and subcause_code = {subCauseCodeID} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+			<Validate>tac = sqlTac,SGSNMME = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,vendor = sqlVendor</Validate>
+			<Validate>3.model = terminalModel, 3.manuf = terminalMake, 3.tac = sqlTac</Validate>
+		</RepeatValidation> 
+		<Validate>3.failures = count{eventTime}</Validate>
+		<Validate>sort{eventTime} = desc</Validate>
+	</TestCase>
+
+
+	<TestCase id="4">
+		<Direction>Select Most PDP Session Setup Failures</Direction> 
+		<Url><![CDATA[TERMINAL/TERMINAL_ANALYSIS/MOST_PDP_SESSION_SETUP_FAILURES?dateFrom=22072014&dateTo=22072014&timeFrom=1345&timeTo=1415&display=grid&tzOffset=+0100&maxRows=30]]></Url> 
+		<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&dataTimeFrom=1415625300000&dataTimeTo=1415646900000&userName=admin&url=TERMINAL/TERMINAL_ANALYSIS/MOST_PDP_SESSION_SETUP_FAILURES&maxRows=0]]></CSVUrl>
+		<JSONVariables>1:rank,2:tac,3:manuf,4:model,5:failures,6:band</JSONVariables>  
+		<RepeatValidation instruction="all"> 
+			<SqlTest><![CDATA[SELECT rank AS 'sqlRank', no_of_errors AS 'sqlFailures' FROM ( SELECT tac, no_of_errors, rank() over (ORDER BY no_of_errors DESC) AS rank FROM ( SELECT COUNT(*) AS no_of_errors, tac FROM ( SELECT tac FROM event_e_lte_err_raw WHERE datetime_id >= '2015-03-23 14:15' AND datetime_id < '2015-03-23 14:45' AND tac NOT IN ( SELECT tac FROM group_type_e_tac WHERE group_name = 'EXCLUSIVE_TAC') AND event_id IN (1,11) UNION ALL SELECT tac FROM event_e_sgeh_err_raw WHERE datetime_id >= '2015-03-23 14:15' AND datetime_id < '2015-03-23 14:45' AND tac NOT IN ( SELECT tac FROM group_type_e_tac WHERE group_name = 'EXCLUSIVE_TAC') AND event_id IN (1,11)) errCount GROUP BY tac ) errView ) rankView WHERE tac = {tac}]]></SqlTest>
+			<Validate>failures = sqlFailures</Validate>
+			<Validate>rank = sqlRank</Validate>
+			 <Validate><![CDATA[rank <= 30]]></Validate>
+		</RepeatValidation>
+		<Validate>sort{rank} = asc</Validate>
+    	<Validate>sort{failures} = desc</Validate> 
+		<RepeatDrillDown instruction="all">7</RepeatDrillDown> 
+		<PassToDrillDown id="7">manuf,model,tac,failures</PassToDrillDown>
+	</TestCase>
+	
+	<TestCase id="7">
+		<PreCondition>4.failures > 0</PreCondition>
+		<Direction>Drill on Failures</Direction> 
+		<Url><![CDATA[TERMINAL/EVENT_ANALYSIS?dateFrom=04112014&dateTo=04112014&timeFrom=0813&timeTo=0843&display=grid&tzOffset=+0000&maxRows=30&key=ERR&type=TAC&eventID=1,11&MANF={4.manuf}&MODEL={4.model}&tac={4.tac}]]></Url> 
+		<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&key=ERR&type=TAC&eventID=1,11&MANF={4.manuf}&MODEL={4.model}&tac={4.tac}&dataTimeFrom=1415625300000&dataTimeTo=1415646900000&userName=admin&url=TERMINAL/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+		<IgnoredInCsv>72:sysCauseCode,73:sysSubcause,74:sysEventRes,75:sysCauseProt</IgnoredInCsv>
+		<JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventIdDesc,8:eventResDesc,9:causeProtDesc,10:causeCodeID,11:causeCodeDesc,12:subCauseCodeID,13:subCauseCodeDesc,14:SGSNMME,15:ratDesc,16:controller,18:accessArea,19:vendor,57:apn,74:eventResId,75:causeProtId,76:ratId</JSONVariables>  
+		<RepeatValidation instruction="random10"> 
+		    <SqlTest instruction="Use:ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {imsi} and tac = {tac} and event_time = '{eventTime}' and cause_code = {causeCodeID} and subcause_code = {subCauseCodeID} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+			<Validate>tac = sqlTac,SGSNMME = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,vendor = sqlVendor</Validate>
+			<Validate>4.model = terminalModel, 4.manuf = terminalMake, 4.tac = sqlTac</Validate>
+		</RepeatValidation> 
+		<Validate>4.failures = count{eventTime}</Validate>
+		<Validate>sort{eventTime} = desc</Validate>
+	</TestCase>
+
+	<TestCase id="5">
+		<Direction>Select Most Mobility Failures View</Direction> 
+		<Url><![CDATA[TERMINAL/TERMINAL_ANALYSIS/MOST_MOBILITY_ISSUES?time=30&display=grid&tzOffset=+0100&maxRows=30]]></Url> 
+		<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&dataTimeFrom=1415625300000&dataTimeTo=1415646900000&userName=admin&url=TERMINAL/TERMINAL_ANALYSIS/MOST_MOBILITY_ISSUES&maxRows=0]]></CSVUrl>
+		<JSONVariables>1:rank,2:tac,3:manuf,4:model,5:failures,6:band</JSONVariables>  
+		<RepeatValidation instruction="all"> 
+			<SqlTest><![CDATA[SELECT rank AS 'sqlRank', no_of_errors AS 'sqlFailures' FROM ( SELECT tac, no_of_errors, rank() over (ORDER BY no_of_errors DESC) AS rank FROM ( SELECT COUNT(*) AS no_of_errors, tac FROM ( SELECT tac FROM event_e_lte_err_raw WHERE datetime_id >= '2015-03-23 14:15' AND datetime_id < '2015-03-23 14:45' AND tac NOT IN ( SELECT tac FROM group_type_e_tac WHERE group_name = 'EXCLUSIVE_TAC') AND event_id IN (2,3,7,8) UNION ALL SELECT tac FROM event_e_sgeh_err_raw WHERE datetime_id >= '2015-03-23 14:15' AND datetime_id < '2015-03-23 14:45' AND tac NOT IN ( SELECT tac FROM group_type_e_tac WHERE group_name = 'EXCLUSIVE_TAC') AND event_id IN (2,3,7,8)) errCount GROUP BY tac ) errView ) rankView WHERE tac = {tac}]]></SqlTest>
+			<Validate>failures = sqlFailures</Validate>
+			<Validate>rank = sqlRank</Validate>
+			 <Validate><![CDATA[rank <= 30]]></Validate>
+		</RepeatValidation>
+		<Validate>sort{rank} = asc</Validate>
+    	<Validate>sort{failures} = desc</Validate> 
+		<RepeatDrillDown instruction="all">8</RepeatDrillDown> 
+		<PassToDrillDown id="8">manuf,model,tac,failures</PassToDrillDown>
+	</TestCase>
+
+	<TestCase id="8">
+		<PreCondition>5.failures > 0</PreCondition>
+		<Direction>Drill on Failures</Direction> 
+		<Url><![CDATA[TERMINAL/EVENT_ANALYSIS?dateFrom=04112014&dateTo=04112014&timeFrom=0813&timeTo=0843&display=grid&tzOffset=+0000&maxRows=30&key=ERR&type=TAC&eventID=2,3,7,8&MANF={5.manuf}&MODEL={5.model}&tac={5.tac}]]></Url> 
+		<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=+0000&key=ERR&type=TAC&eventID=2,3,7,8&MANF={5.manuf}&MODEL={5.model}%205S&tac={5.tac}&dataTimeFrom=1415626200000&dataTimeTo=1415647800000&userName=admin&url=TERMINAL/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+		<IgnoredInCsv>72:sysCauseCode,73:sysSubcause,74:sysEventRes,75:sysCauseProt</IgnoredInCsv>
+		<JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventIdDesc,8:eventResDesc,9:causeProtDesc,10:causeCodeID,11:causeCodeDesc,12:subCauseCodeID,13:subCauseCodeDesc,14:SGSNMME,15:ratDesc,16:controller,18:accessArea,19:vendor,57:apn,74:eventResId,75:causeProtId,76:ratId</JSONVariables>  
+		<RepeatValidation instruction="random10"> 
+		    <SqlTest instruction="Use:ratId"><![CDATA[select tac as 'sqlTac', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchyThree', hierarchy_1 as 'sqlHierarchyOne', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_lte_err_raw where imsi = {imsi} and tac = {tac} and event_time = '{eventTime}' and cause_code = {causeCodeID} and subcause_code = {subCauseCodeID} and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac not in (select tac from group_type_e_tac where group_name = 'EXCLUSIVE_TAC')]]></SqlTest>
+			<Validate>tac = sqlTac,SGSNMME = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,vendor = sqlVendor</Validate>
+			<Validate>5.model = terminalModel, 5.manuf = terminalMake, 5.tac = sqlTac</Validate>
+		</RepeatValidation> 
+		<Validate>5.failures = count{eventTime}</Validate>
+		<Validate>sort{eventTime} = desc</Validate>
+	</TestCase>
+       
+</TestSuite>

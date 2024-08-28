@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+<TestCase id="1">
+   <Direction>Launch -> Terminal Group -> 3G Terminal Event Analysis -> Handover Failure</Direction>
+   <Url><![CDATA[TERMINAL/WCDMA_HANDOVER_FAILURE_EVENT_SUMMARY/TAC?dateFrom=19052015&dateTo=19052015&timeFrom=0300&timeTo=0500&type=TAC&groupname={-master-RANHFATerminalGroup}&display=grid&tzOffset=%2B0100]]></Url>
+   <CSVUrl><![CDATA[EniqEventsCSV.jsp?type=TAC&groupname={-master-RANHFATerminalGroup}&display=grid&tzOffset=%2B0100&dataTimeFrom=1432000800000&dataTimeTo=1432008000000&userName=admin&url=TERMINAL/WCDMA_HANDOVER_FAILURE_EVENT_SUMMARY/TAC&maxRows=0]]></CSVUrl>
+   <JSONVariables>1:groupName,3:categoryId,4:jsonFailures,5:jsonSubs</JSONVariables>
+   <Validate>sort{jsonFailures} = desc</Validate>
+   <RepeatValidation instruction="all">
+   <SqlTest instruction="Use:categoryId"><![CDATA[select count(*) as 'sqlFailures', count(distinct imsi) as 'sqlSubs' from event_e_ran_hfa_soho_err_raw where DATETIME_ID >= '2015-05-19 02:00' and DATETIME_ID < '2015-05-19 04:00' and tac in (select tac from GROUP_TYPE_E_TAC where group_name = '{groupName}')]]></SqlTest>
+   <Validate>sqlFailures=jsonFailures,sqlSubs=jsonSubs</Validate>
+   </RepeatValidation>
+   <Validate>sort{jsonFailures} = desc</Validate>
+   <RepeatDrillDown instruction="all">2</RepeatDrillDown>
+   <PassToDrillDown id="2">groupName,categoryId,jsonFailures</PassToDrillDown>
+</TestCase>
+
+<TestCase id='2'>
+   <PreCondition>1.jsonFailures > 0</PreCondition>
+   <Direction>Drill on Failures</Direction>
+   <Url><![CDATA[NETWORK/WCDMA_HANDOVER_FAILURE_DETAILED_EVENT_ANALYSIS/TAC?dateFrom=19052015&dateTo=19052015&timeFrom=0300&timeTo=0500&display=grid&tzOffset=%2B0100&maxRows=500&groupname={1.groupName}&categoryId={1.categoryId}&type=TAC]]></Url>
+   <CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=%2B0100&groupname={1.groupName}&categoryId={1.categoryId}&type=TAC&dataTimeFrom=1432000800000&dataTimeTo=1432008000000&userName=admin&url=NETWORK/WCDMA_HANDOVER_FAILURE_DETAILED_EVENT_ANALYSIS/TAC&maxRows=0]]></CSVUrl>
+   <JSONVariables>1:eventTime,2:imsi,3:tac,4:terminalMake,5:terminalModel</JSONVariables>
+   <Validate>1.jsonFailures = count{eventTime}</Validate>
+   <RepeatValidation instruction="all">
+   <SqlTest instruction="Use:1.categoryId"><![CDATA[select imsi as 'sqlIMSI', isnull(cast(raw.tac as varchar(10)),'') as 'sqlTAC' from EVENT_E_RAN_HFA_SOHO_ERR_RAW as RAW, GROUP_TYPE_E_TAC as GRP where DATETIME_ID >= '2015-05-19 02:00' and DATETIME_ID < '2015-05-19 04:00' and raw.tac = grp.tac and grp.group_name = '{1.groupName}' and event_time = '{eventTime}' and imsi = {imsi}]]></SqlTest>
+   <Validate>imsi = sqlIMSI, tac = sqlTAC</Validate>
+   <SqlTest instruction="Use:1.categoryId"><![CDATA[select case when (rawview.TAC IS NULL) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') else DIM_E_SGEH_TAC.VENDOR_NAME end as 'sqlMake'   from (select TAC from EVENT_E_RAN_HFA_SOHO_ERR_RAW where event_time = '{eventTime}' and IMSI={imsi} and DATETIME_ID >= '2015-02-10 16:51' and DATETIME_ID < '2015-02-10 17:51' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) AS rawview, DIM_E_SGEH_TAC WHERE rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+   <SqlTest instruction="Use:1.categoryId"><![CDATA[select case when (rawview.TAC IS NULL ) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Invalid') else DIM_E_SGEH_TAC.MARKETING_NAME end as 'sqlModel'  from (select TAC from EVENT_E_RAN_HFA_SOHO_ERR_RAW where event_time = '{eventTime}' and IMSI={imsi} and DATETIME_ID >= '2015-02-10 16:51' and DATETIME_ID < '2015-02-10 17:51' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) AS rawview, DIM_E_SGEH_TAC WHERE rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+   <Validate>terminalMake = sqlMake, terminalModel = sqlModel</Validate>
+   </RepeatValidation>
+</TestCase>
+</TestSuite>

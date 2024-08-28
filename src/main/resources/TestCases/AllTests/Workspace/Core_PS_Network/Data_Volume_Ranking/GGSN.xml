@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+    <TestCase id="1">
+        <Direction>Launch -> Core PS Network -> Data Volume Ranking -> GGSN </Direction>
+        <Url><![CDATA[NETWORK/DATAVOL_RANKING_ANALYSIS?time=10080&display=grid&type=GGSN&tzOffset=%2B0530&maxRows=500]]></Url>
+        <CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&type=GGSN&tzOffset=%2B0530&dataTimeFrom=1418668200000&dataTimeTo=1419273000000&userName=admin&url=NETWORK/DATAVOL_RANKING_ANALYSIS&maxRows=0]]></CSVUrl>
+        <JSONVariables>1:rank,2:ggsn,3:totalDataVolume,4:downlinkDataVolume,5:uplinkDataVolume</JSONVariables>
+        <RepeatValidation instruction="all"> 
+            <SqlTest><![CDATA[select convert(numeric(16,2), SUM(convert(numeric(16,2), DATAVOL_DL)/1048576)) as 'sqltotaldatavoldl' from EVENT_E_DVTP_DT_RAW temp_dt where DATETIME_ID >= '2015-01-07 12:20' and DATETIME_ID < '2015-01-07 12:50' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest> 
+            <Validate>downlinkDataVolume = sqltotaldatavoldl</Validate> 
+            <SqlTest><![CDATA[select convert(numeric(16,2), SUM(convert(numeric(16,2), DATAVOL_UL)/1048576)) as 'sqltotaldatavolul' from EVENT_E_DVTP_DT_RAW temp_dt where DATETIME_ID >= '2015-01-07 12:20' and DATETIME_ID < '2015-01-07 12:50' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest> 
+            <Validate>uplinkDataVolume = sqltotaldatavolul</Validate>  
+            <Validate>totalDataVolume = sqltotaldatavolul + sqltotaldatavoldl</Validate>
+        </RepeatValidation>
+    </TestCase>
+</TestSuite>

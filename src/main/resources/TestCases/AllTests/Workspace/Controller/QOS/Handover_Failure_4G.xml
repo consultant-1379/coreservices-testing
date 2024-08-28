@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<TestCase id="1">
+<Direction>Launch -> Controller ->QOS -> HandOver Failure (4G)</Direction>
+<Url><![CDATA[NETWORK/LTE_HFA_QOS_SUMMARY_ANALYSIS/QCI_CATEGARY_SUMMARY?time={time}&type=BSC&node={-master-LTEHFAControllerNode}&display=grid&tzOffset=+0530&maxRows=500]]></Url>
+<JSONVariables>1:hierThreeId,2:qciId,4:categoryId,6:failures,7:impactedSubscribers,8:controller,9:vendor,10:node</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest ><![CDATA[SELECT data_table.FAILURES as 'sqlFailures',data_table.IMPACTED_SUBSCRIBERS as 'sqlImpacted' FROM( select count (*) as FAILURES,{hierThreeId} as HIER3_ID,QCI_ID,CATEGORY_ID_2,count (distinct rawview.IMSI) as IMPACTED_SUBSCRIBERS from (select QCI_ID,CATEGORY_ID_2,IMSI from EVENT_E_LTE_HFA_ARRAY_ERAB_ERR_RAW where QCI_ID ={qciId} and  HIER3_ID ={hierThreeId} and CATEGORY_ID_2 ={categoryId} and DATETIME_ID >= '2015-02-13 11:49' and DATETIME_ID < '2015-02-13 12:19'and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) as rawview group by  QCI_ID,CATEGORY_ID_2 ) as data_table join  DIM_E_LTE_QCI on DIM_E_LTE_QCI.QCI_NUMBER = data_table.QCI_ID  ]]></SqlTest>
+<Validate>failures=sqlFailures</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">2</RepeatDrillDown>
+<PassToDrillDown id="2">hierThreeId,qciId,categoryId,controller,vendor,node</PassToDrillDown>
+</TestCase>
+
+<TestCase id="2">
+<Direction>Drill on HandOver Stage</Direction>
+<Url><![CDATA[NETWORK/LTE_HFA_QOS_SUMMARY_ANALYSIS/QCI_EVENT_SUMMARY/ENODEB?time={time}&display=grid&tzOffset=+0530&maxRows=500&&HIER3_ID={1.hierThreeId}&QCI_ID={1.qciId}&CATEGORY_ID_2={1.categoryId}&HIERARCHY_3={1.controller}&Vendor={1.vendor}&node={1.node} ]]></Url>
+<JSONVariables>1:hierThreeId,2:qciId,3:eventId,5:failures</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest ><![CDATA[select count (*) as 'sqlFailures',count (distinct IMSI) as 'sqlImpactedsub' from EVENT_E_LTE_HFA_ARRAY_ERAB_ERR_RAW where HIER3_ID = {hierThreeId} and EVENT_ID ={eventId} and QCI_ID = {qciId} and CATEGORY_ID_2 = {1.categoryId} and DATETIME_ID >= '2015-02-12 16:30' and DATETIME_ID < '2015-02-12 17:00'and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>failures=sqlFailures</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">3</RepeatDrillDown>
+<PassToDrillDown id="3">hierThreeId,qciId,eventId,failures</PassToDrillDown>
+</TestCase>
+
+<TestCase id="3">
+<Precondition>2.failures > 0</Precondition>
+<Direction>Drill on  Failures</Direction>
+<Url><![CDATA[NETWORK/LTE_HFA_QOS_DETAILED_EVENT_ANALYSIS/QCI/ENODEB?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=+0530&maxRows=500&HIER3_ID={2.hierThreeId}&QCI_ID={2.qciId}&eventID={2.eventId}&node={-master-LTEHFAControllerNode}]]></Url>
+<JSONVariables>1:hierThreeId,5:eventTime,6:IMSI,7:TAC,8:Make,9:Model</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest ><![CDATA[ select isnull(CAST(rawview.imsi as varchar),' ') as 'sqlIMSI',isnull(CAST(rawview.tac as varchar),' ') as 'sqlTac', case WHEN (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') ELSE ' ' END AS 'sqlMake', case when (rawview.TAC IS NOT null AND  rawview.TAC <> 0 ) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME,'Model Unknown') when (rawview.TAC = 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME,'Model Invalid') else ' ' end AS 'sqlModel' from ( select imsi,tac from EVENT_E_LTE_HFA_ARRAY_ERAB_ERR_RAW where event_time = '{eventTime}' and EVENT_ID = {2.eventId} and HIER3_ID = {hierThreeId} and QCI_ID = {2.qciId} and imsi={IMSI}  and DATETIME_ID >= '2015-02-13 15:19' and DATETIME_ID < '2015-02-13 16:19'   and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) AS rawview, DIM_E_SGEH_TAC WHERE rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+<Validate>IMSI = sqlIMSI,Make = sqlMake,Model = sqlModel,TAC = sqlTac </Validate>
+<Validate>2.failures = count{eventTime}</Validate>
+</RepeatValidation>
+</TestCase>
+
+</TestSuite>

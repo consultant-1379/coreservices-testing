@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+    <TestCase id="1">
+        <Direction>Launch -> Access Area Group -> Cause Code Analysis ->HandOver Failure (4G)</Direction>
+        <Url><![CDATA[NETWORK/LTE_HFA_CAUSE_CODE_ANALYSIS/PIE_CHART_CC_LIST?type=CELL&groupname={-master-LTEHFAGroup}&time={time}&tzOffset=+0530]]></Url>
+        <JSONVariables>1:CC,2:CCDesc</JSONVariables>
+        <SqlTest><![CDATA[select count(*) as 'sqlCauseCode' from ( select EVENT_ID||'-'||CAUSE_CODE as CauseCode from ( select CAUSE_CODE,EVENT_ID from EVENT_E_LTE_HFA_ERR_RAW as errTable,dc.GROUP_TYPE_E_RAT_VEND_HIER321 groupTable where errTable.HIER321_ID = groupTable.HIER321_ID and groupTable.GROUP_NAME = 'LTE_Group' and DATETIME_ID >= '2015-02-09 14:09' and DATETIME_ID < '2015-02-09 14:39' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and CAUSE_CODE is not null and EVENT_ID is not null) as err group by CAUSE_CODE,EVENT_ID) as event]]></SqlTest>
+        <Validate>count{CC} = sqlCauseCode</Validate>
+        <RepeatDrillDown instruction="all">2,4</RepeatDrillDown>
+        <PassToDrillDown id="4">CC</PassToDrillDown>
+    </TestCase>
+    <!-- ____________________________________________________GRID VIEW ______________________________________________________________ -->
+
+    <TestCase id="2">
+        <Direction>Click on Grid View </Direction>
+        <MAXROWCOUNT>500</MAXROWCOUNT>
+        <Url><![CDATA[NETWORK/LTE_HFA_CAUSE_CODE_ANALYSIS/CAUSE_CODE_ANALYSIS?time={time}&type=CELL&groupname={-master-LTEHFAGroup}&display=grid&tzOffset=+0530&maxRows=500]]></Url>
+        <JSONVariables>1:group,2:eventId,3:eventType,4:causeCode,6:occurrences,7:impactedSubcriber</JSONVariables>
+        <Validate>-master-LTEHFAGroup- = group</Validate>
+        <RepeatValidation instruction="all">
+            <SqlTest><![CDATA[select count(*) as 'sqlOccurrences', count(distinct(imsi)) as 'sqlImpactedSubcriber' from EVENT_E_LTE_HFA_ERR_RAW as raw_view,GROUP_TYPE_E_RAT_VEND_HIER321 as GRP where DATETIME_ID >= '2015-02-09 00:30' and DATETIME_ID < '2015-02-09 01:00' and TAC not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and raw_view.HIER321_ID = GRP.HIER321_ID and CAUSE_CODE is not null and GRP.GROUP_NAME = '{group}' and raw_view.EVENT_ID = {eventId} and raw_view.CAUSE_CODE = {causeCode} ]]></SqlTest>
+            <Validate> occurrences = sqlOccurrences,impactedSubcriber = sqlImpactedSubcriber</Validate>
+        </RepeatValidation>
+            <Validate>sort{occurrences} = desc</Validate>
+        <RepeatDrillDown instruction="all">3</RepeatDrillDown>
+        <PassToDrillDown id="3">group,eventId,causeCode,occurrences</PassToDrillDown>
+    </TestCase>
+
+    <TestCase id="3">
+        <Direction>Drill on Occurrences</Direction>
+        <PreCondition>1.occurrences > 0 </PreCondition>
+        <Url><![CDATA[NETWORK/LTE_HANDOVER_FAILURE_SUBSCRIBER_DETAILED_EVENT_ANALYSIS/CAUSE_CODE_ACCESS_AREA?time={time}&display=grid&tzOffset=+0530&maxRows=500&groupname={2.group}&eventID={2.eventId}&causeCode={2.causeCode}]]></Url>
+        <JSONVariables>5:eventTime,7:IMSI,8:TAC,9:jsonMake,10:jsonModel</JSONVariables>
+        <RepeatValidation instruction="all">
+            <SqlTest><![CDATA[select  isnull(CAST(raw_view.imsi as varchar),' ') as 'sqlIMSI', TAC as 'sqlTAC' from EVENT_E_LTE_HFA_ERR_RAW as raw_view,GROUP_TYPE_E_RAT_VEND_HIER321 as GRP where DATETIME_ID >= '2015-02-09 00:30' and DATETIME_ID < '2015-02-09 01:00' and imsi={IMSI}  and TAC not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and raw_view.HIER321_ID = GRP.HIER321_ID and CAUSE_CODE is not null and GRP.GROUP_NAME = '{2.group}' and raw_view.EVENT_ID = {2.eventId} and raw_view.CAUSE_CODE = {2.causeCode} and EVENT_TIME = '{eventTime}']]></SqlTest>
+            <Validate> IMSI = sqlIMSI, TAC = sqlTAC</Validate>
+            <SqlTest><![CDATA[SELECT case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0 ) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') when (rawview.TAC = 0) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') else ' ' end AS 'sqlTerminalMake', case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0 ) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Unknown') when (rawview.TAC = 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Invalid') else ' ' end AS 'sqlTerminalModel' FROM(select distinct TAC from EVENT_E_LTE_HFA_ERR_RAW as raw_view,GROUP_TYPE_E_RAT_VEND_HIER321 as GRP where DATETIME_ID >= '2015-02-24 05:00' and DATETIME_ID < '2015-02-25 05:00' and raw_view.HIER321_ID = GRP.HIER321_ID and CAUSE_CODE is not null and GRP.GROUP_NAME = '{2.group}' and raw_view.EVENT_ID = {2.eventId} and raw_view.CAUSE_CODE = {2.causeCode} and EVENT_TIME = '{eventTime}' and imsi={IMSI} and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) as rawview,DIM_E_SGEH_TAC WHERE rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+            <Validate>jsonMake=sqlTerminalMake, jsonModel=sqlTerminalModel</Validate>
+        </RepeatValidation>
+        <Validate>2.occurrences = count{eventTime}</Validate>
+    </TestCase>
+
+   <!-- ____________________________________________________CHART VIEW______________________________________________________________ -->
+
+    <TestCase id="4">
+        <Direction>Click on Chart View </Direction>
+        <Url><![CDATA[NETWORK/LTE_HFA_CAUSE_CODE_ANALYSIS/PIE_CHART_CAUSE_CODE_ANALYSIS?time={time}&type=CELL&groupname={-master-LTEHFAGroup-}&display=chart&tzOffset=+0530&maxRows=500&causeCodeIds={1.CC}]]></Url>
+        <JSONVariables>3:failure,8:group</JSONVariables>
+        <Validate>-master-LTEHFAGroup- = group</Validate>
+        <RepeatValidation instruction="all">
+            <SqlTest><![CDATA[select sum(failure) as 'sqlFailure' from (select count(*) as failure from dc.EVENT_E_LTE_HFA_ERR_RAW as errTable,dc.GROUP_TYPE_E_RAT_VEND_HIER321 groupTable where errTable.HIER321_ID = groupTable.HIER321_ID and groupTable.GROUP_NAME = '{group}' and DATETIME_ID >= '2015-02-11 13:45' and DATETIME_ID < '2015-02-11 14:15' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and errTable.EVENT_ID||'-'||errTable.CAUSE_CODE = '{1.CC}' and CAUSE_CODE is not null and EVENT_ID is not null) as err]]></SqlTest>
+            <Validate> failure = sqlFailure</Validate>
+        </RepeatValidation>
+            <Validate>sort{failure} = desc</Validate>
+    </TestCase>
+</TestSuite>

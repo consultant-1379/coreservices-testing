@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+    <TestCase id="1">
+        <Direction>Launch -> Terminal Group -> Select Terminal Group -> Core Terminal Event Analysis -> Core PS</Direction>
+        <Url><![CDATA[NETWORK/RANKING_ANALYSIS?time=30&display=grid&type=CELL&tzOffset=+0000&maxRows=50]]></Url>
+        <JSONVariables>2:ratText,3:ratID,4:vendor,5:controller,6:accessArea,7:failures,8:success</JSONVariables>
+
+        <RepeatValidation instruction="all">
+            <SqlTest><![CDATA[select count(*) as 'sqlFailures' from event_e_{ratText}_err_raw where DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac not in (select TAC from group_type_e_tac where group_name = 'EXCLUSIVE TAC') and rat = {ratID} and vendor = '{vendor}' and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' ]]></SqlTest>
+            <Validate>failures = sqlFailures</Validate>
+
+            <SqlTest><![CDATA[select count(*) as 'sqlSuccess' from event_e_{ratText}_suc_raw where DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac not in (select TAC from group_type_e_tac where group_name = 'EXCLUSIVE TAC') and rat = {ratID} and vendor = '{vendor}' and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' ]]></SqlTest>
+            <Validate>success = sqlSuccess</Validate>
+        </RepeatValidation>
+
+    </TestCase>
+
+    <TestCase id="2">
+        <RepeatDrillDown instruction="all">
+            <PreCondition>{1.failures} > 0</PreCondition>
+            <Direction>Drill on Access Area</Direction>
+            <Url><![CDATA[NETWORK/EVENT_ANALYSIS?time=30&RAT={1.ratID}&vendor={1.vendor}&bsc={1.controller}&cell={1.accessArea}&type=CELL&display=grid&key=SUM&tzOffset=+0000&maxRows=500]]></Url>
+            <JSONVariables>1:ratID,2:vendor,3:controller,4:accessArea,5:eventID,6:eventIDDesc,7:failures,8:success,9:totalEvents,10:successRatio,11:impactedSubscribers</JSONVariables>
+
+            <RepeatValidation instruction="all">
+                <SqlTest><![CDATA[select count(*) as 'sqlFailures' from event_e_{1.ratText}_err_raw where DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac not in (select TAC from group_type_e_tac where group_name = 'EXCLUSIVE TAC') and rat = {ratID} and vendor = '{vendor}' and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and event_id = '{eventID}']]></SqlTest>
+                <Validate>failures = sqlFailures</Validate>
+
+                <SqlTest><![CDATA[select count(*) as 'sqlSuccess' from event_e_{1.ratText}_suc_raw where DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac not in (select TAC from group_type_e_tac where group_name = 'EXCLUSIVE TAC') and rat = {ratID} and vendor = '{vendor}' and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and event_id = '{eventID}']]></SqlTest>
+                <Validate>success = sqlSuccess</Validate>
+
+                <SqlTest><![CDATA[select count(distinct(imsi)) as 'sqlImpacted' from event_e_{1.ratText}_err_raw where DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac not in (select TAC from group_type_e_tac where group_name = 'EXCLUSIVE TAC') and rat = {ratID} and vendor = '{vendor}' and hierarchy_1 = '{accessArea}' and hierarchy_3 = '{controller}' and event_id = '{eventID}']]> </SqlTest>
+                <Validate>impactedSubscribers = sqlImpacted</Validate>
+                <Validate>{1.failures} = sum{failures}</Validate>
+                <Validate>{1.success} = sum(success)</Validate>
+                <Validate>{success} + {failure} = {totalEvents}</Validate>
+                <Validate>{success} / {failure} = {successRatio}</Validate>
+            </RepeatValidation>
+        </RepeatDrillDown>
+    </TestCase>
+
+    <TestCase id="3">
+        <RepeatDrillDown instruction="random5">
+            <PreCondition>{2.failures} > 0</PreCondition>
+            <Direction>Drill on Failures</Direction>
+            <Url><![CDATA[NETWORK/EVENT_ANALYSIS?time=10080&display=grid&tzOffset=+0000&maxRows=500&key=ERR&type=CELL&dataTieredDelay=true&RAT={2.ratID}&vendor={2.vendor}&bsc={2.controller}&cell={2.accessArea}&eventID={2.eventID}]]></Url>
+            <JSONVariables>1:eventTime,2:imsi,4:tac,5:terminalMake,6:terminalModel,7:eventIdDesc,8:eventResDesc,9:causeProtDesc,10:causeCodeID,11:causeCodeDesc,12:subCauseCodeID,13:subCauseCodeDesc,14:SGSN-MME,15:ratDesc,16:controller,18:accessArea,19:vendor,57:apn,76:ratID</JSONVariables>
+
+            <RepeatValidation instruction="random20">
+                <SqlTest><![CDATA[select tac as 'sqlTac', cause_code as 'sqlCauseCode', subcause_code as 'sqlSubCauseCode', event_source_name as 'sqlEventSourceName', rat as 'sqlRatID', hierarchy_3 as 'sqlHierarchy_3', hierarchy_1 as 'sqlHierarchy_1', event_id as 'sqlEventID', vendor as 'sqlVendor' from event_e_{1.ratText}_err_raw where imsi = {imsi} and event_time = {eventTime} and tac not in (select TAC from group_type_e_tac where group_name = 'EXCLUSIVE TAC') and DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00']]></SqlTest>
+                <Validate>tac = sqlTac, causeCodeID = sqlCauseCode, subCauseCodeID = sqlSubCauseCode, SGSN-MME = sqlEventSourceName, ratID = sqlRatID, 2.controller = sqlHierarchy_3, 2.accessArea = sqlHierarchy_1,2.eventID = sqlEventID, 2.vendor = sqlVendor</Validate>
+            </RepeatValidation>
+
+            <SqlTest><![CDATA[select count(*) as 'sqlTotalEvents' from event_e_{1.ratText}_err_raw where DATETIME_ID >= '2014-03-06 09:30' and DATETIME_ID < '2014-03-06 10:00' and tac not in (select TAC from group_type_e_tac where group_name = 'EXCLUSIVE TAC') and event_id = {2.eventID} and hierarchy_1 = {2.accessArea} and vendor = {2.vendor} and rat = {2.ratID} and hierarchy_3 = {2.controller} ]]></SqlTest>
+            <Validate>sqlTotalEvents = count{eventTime}</Validate>
+        </RepeatDrillDown>
+    </TestCase>
+
+</TestSuite>

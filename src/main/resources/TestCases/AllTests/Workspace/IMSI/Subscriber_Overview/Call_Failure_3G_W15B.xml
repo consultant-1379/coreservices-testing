@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<TestCase id="1">
+<Direction> Launch -> IMSI -> Subscriber Overview -> Call Failure (3G) </Direction>
+<MaxValidation>2</MaxValidation>
+<Url><![CDATA[SUBSCRIBER/CALLFAILURE_SUBSESSION_BI/FAILURE?dateFrom=17022015&dateTo=17022015&timeFrom=1215&timeTo=1245&type=IMSI&imsi={-master-WcdmaImsi}&display=chart&tzOffset=%2B0000]]></Url>
+<JSONVariables>1:failures,3:reestablishmentFailures,4:eventId</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count(*) as 'sqlFailures' from EVENT_E_RAN_CFA_ERR_RAW where DATETIME_ID >= '2015-02-17 12:15' and DATETIME_ID < '2015-02-17 12:45' and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and event_id = {eventId} and imsi = {-master-WcdmaImsi}]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+</RepeatValidation>
+</TestCase>
+
+</TestSuite>

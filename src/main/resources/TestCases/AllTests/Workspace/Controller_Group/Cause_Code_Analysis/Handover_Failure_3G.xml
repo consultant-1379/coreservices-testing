@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+   <TestCase id="1">
+   <maxValidation>9</maxValidation>
+   <Direction>Launch -> Controller Group -> Cause Code Analysis -> Handover Failure (3G) ->Grid View</Direction>
+   <Url><![CDATA[NETWORK/WCDMA_HFA_CAUSE_CODE_ANALYSIS/CAUSE_CODE_GRID?dateFrom=21012015&dateTo=22012015&timeFrom=1400&timeTo=1400&type=BSC&groupname={-master-WcdmaControllerGroup}&display=grid&tzOffset=%2B0530&maxRows=500]]></Url>
+   <JSONVariables>1:label,6:causeCode,3:failure,7:eventId,8:categoryId,9:handoverFailureType,10:controllerGrp,11:state</JSONVariables>
+   <RepeatValidation instruction="all">
+   <SqlTest instruction="Use:categoryId"><![CDATA[select count(*) as 'sqlFailures' from EVENT_E_RAN_HFA_SOHO_ERR_RAW as RAW, GROUP_TYPE_E_RAT_VEND_HIER3 as RAT where  RAT.GROUP_NAME = '{controllerGrp}' and RAW.HIER3_ID = RAT.HIER3_ID and  DATETIME_ID >= '2015-01-21 14:00' and DATETIME_ID < '2015-01-21 14:30' and CAUSE_VALUE = {causeCode} and EVENT_ID ={eventId} ]]></SqlTest>
+   <Validate>failure = sqlFailures</Validate>
+   </RepeatValidation>
+   <RepeatDrillDown instruction="all">2,4</RepeatDrillDown>
+   <PassToDrillDown id="2">failure,causeCode,categoryId,controllerGrp,eventId,state</PassToDrillDown>
+   <PassToDrillDown id="4">failure,causeCode,categoryId,controllerGrp,eventId,state</PassToDrillDown>
+   </TestCase>
+
+   <TestCase id="2">
+   <PreCondition>1.categoryId != 1</PreCondition>
+   <Direction>Drill on Cause Code</Direction>
+   <Url><![CDATA[NETWORK/WCDMA_HFA_CAUSE_CODE_ANALYSIS/SUB_CAUSE_CODE_GRID?dateFrom=21012015&dateTo=22012015&timeFrom=1400&timeTo=1400&type=BSC&groupname={1.controllerGrp}&display=grid&tzOffset=%2B0530&maxRows=500&causeCode={1.causeCode}&eventID={1.eventId}&categoryId={1.categoryId}&groupname={1.controllerGrp}&state={1.state}&type=BSC]]></Url>
+   <JSONVariables>3:sccFailure,6:causeCode,7:subCauseCode,8:eventId,9:categoryId,11:controllerGrp,12:state</JSONVariables>
+
+   <Validate>1.failure = sum{sccFailure}</Validate>
+   <RepeatDrillDown instruction="all">3</RepeatDrillDown>
+   <PassToDrillDown id="3">sccFailure,controllerGrp,eventId,categoryId,state,causeCode,subCauseCode</PassToDrillDown>
+   </TestCase>
+
+  <TestCase id="3">
+   <Direction>Drill on Sub Cause Code</Direction>
+   <Url><![CDATA[NETWORK/WCDMA_HFA_CAUSE_CODE_ANALYSIS/DETAIL_SUB_CAUSE_CODE_GRID?dateFrom=21012015&dateTo=22012015&timeFrom=1400&timeTo=1400&display=grid&tzOffset=%2B0530&maxRows=500&causeCode={2.causeCode}&subCauseCode={2.subCauseCode}&eventID={2.eventId}&categoryId={2.categoryId}&groupname={2.controllerGrp}&state={2.state}&type=BSC]]></Url>
+
+   <JSONVariables>1:eventTime</JSONVariables>
+   <Validate>2.sccFailure = count{eventTime}</Validate>
+   </TestCase>
+
+   <TestCase id="4">
+   <PreCondition>1.categoryId = 1</PreCondition>
+   <Direction>Drill on Cause Code</Direction>
+   <Url><![CDATA[NETWORK/WCDMA_HFA_CAUSE_CODE_ANALYSIS/DETAIL_SUB_CAUSE_CODE_GRID?dateFrom=21012015&dateTo=22012015&timeFrom=1400&timeTo=1400&display=grid&tzOffset=%2B0000&maxRows=500&causeCode={1.causeCode}&eventID={1.eventId}&categoryId={1.categoryId}&groupname={1.controllerGrp}&state={1.state}&type=BSC]]></Url>
+
+  <JSONVariables>1:eventTime</JSONVariables>
+   <Validate>1.failure = count{eventTime}</Validate>
+   </TestCase>
+
+</TestSuite>

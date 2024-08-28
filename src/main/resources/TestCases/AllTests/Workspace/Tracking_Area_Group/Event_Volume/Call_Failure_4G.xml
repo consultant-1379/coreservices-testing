@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TestSuite>
+
+<!--__________________________________________________________Grid View__________________________________________________________-->
+
+<TestCase id="1">
+<Direction>Launch -> Tracking Area Group -> Event Volume -> Call Failure (4G)</Direction>
+<Url><![CDATA[NETWORK/LTE_CFA_EVENT_VOLUME/EVENT_VOLUME?time=10080&type=TRAC&groupname={-master-LTECFATrackingAreaGroup}&display=grid&tzOffset=+0530&maxRows=500]]></Url>
+<JSONVariables>1:eventVolumeTime,2:rrcConnSetup,3:soneSigConnSetup,4:initialCtxtSetup,5:erabSetup,6:ueCtxtRelease,7:impactedSubs</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select isnull(sum (case when err.EVENT_ID = 4097 then isnull(err.FAILURES, 0) end),0) as 'sqlRrcConnSetup',  isnull(sum (case when err.EVENT_ID = 4098 then isnull(err.FAILURES, 0) end),0) as 'sqlSoneSigConnSetup', isnull(sum (case when err.EVENT_ID = 4106 then isnull(err.FAILURES, 0) end),0) as 'sqlInitialCtxtSetup', isnull(sum (case when err.EVENT_ID = 4099 then isnull(err.FAILURES, 0) end),0) as 'sqlErabSetup', isnull(sum (case when err.EVENT_ID = 4125 then isnull(err.FAILURES, 0) end),0) as 'sqlUeCtxtRelease', isnull(max(err.SUBS), 0) as 'sqlImpactedSubs'   from ( select count(*) as FAILURES, count(distinct(IMSI)) as SUBS, EVENT_ID from EVENT_E_LTE_CFA_ERR_RAW,GROUP_TYPE_E_LTE_TRAC where {eventVolumeTime} and EVENT_E_LTE_CFA_ERR_RAW.TRAC =GROUP_TYPE_E_LTE_TRAC.TRAC and GROUP_TYPE_E_LTE_TRAC.GROUP_NAME='{-master-LTECFATrackingAreaGroup}'  and  EVENT_ID is not null and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')  group by EVENT_ID) as err]]></SqlTest>
+<Validate>rrcConnSetup=sqlRrcConnSetup, soneSigConnSetup=sqlSoneSigConnSetup, initialCtxtSetup=sqlInitialCtxtSetup, erabSetup=sqlErabSetup, ueCtxtRelease=sqlUeCtxtRelease, impactedSubs=sqlImpactedSubs</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">2</RepeatDrillDown>
+</TestCase>
+
+<!--__________________________________________________________Chart View__________________________________________________________-->
+
+<TestCase id="2">
+<Direction>Drill On Chart</Direction>
+<Url><![CDATA[NETWORK/LTE_CFA_EVENT_VOLUME/EVENT_VOLUME?time=30&type=TRAC&groupname={-master-LTECFATrackingAreaGroup}&display=chart&tzOffset=%2B0530&maxRows=500]]></Url>
+<JSONVariables>1:eventVolumeTime,2:rrcConnSetup,3:soneSigConnSetup,4:initialCtxtSetup,5:erabSetup,6:ueCtxtRelease,7:impactedSubs</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select isnull(sum (case when err.EVENT_ID = 4097 then isnull(err.FAILURES, 0) end),0) as 'sqlRrcConnSetup',  isnull(sum (case when err.EVENT_ID = 4098 then isnull(err.FAILURES, 0) end),0) as 'sqlSoneSigConnSetup', isnull(sum (case when err.EVENT_ID = 4106 then isnull(err.FAILURES, 0) end),0) as 'sqlInitialCtxtSetup', isnull(sum (case when err.EVENT_ID = 4099 then isnull(err.FAILURES, 0) end),0) as 'sqlErabSetup', isnull(sum (case when err.EVENT_ID = 4125 then isnull(err.FAILURES, 0) end),0) as 'sqlUeCtxtRelease', isnull(max(err.SUBS), 0) as 'sqlImpactedSubs'   from ( select count(*) as FAILURES, count(distinct(IMSI)) as SUBS, EVENT_ID from EVENT_E_LTE_CFA_ERR_RAW,GROUP_TYPE_E_LTE_TRAC where {eventVolumeTime} and EVENT_E_LTE_CFA_ERR_RAW.TRAC =GROUP_TYPE_E_LTE_TRAC.TRAC and GROUP_TYPE_E_LTE_TRAC.GROUP_NAME='{-master-LTECFATrackingAreaGroup}'  and  EVENT_ID is not null and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')  group by EVENT_ID) as err]]></SqlTest>
+<Validate>rrcConnSetup=sqlRrcConnSetup, soneSigConnSetup=sqlSoneSigConnSetup, initialCtxtSetup=sqlInitialCtxtSetup, erabSetup=sqlErabSetup, ueCtxtRelease=sqlUeCtxtRelease, impactedSubs=sqlImpactedSubs</Validate>
+</RepeatValidation>
+</TestCase>
+</TestSuite>

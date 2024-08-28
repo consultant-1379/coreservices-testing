@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+<TestCase id="1">
+   <Direction>Launch -> 3G Radio Network -> 3G Ranking -> Hand over Failure By Source Cell</Direction>
+   <Url><![CDATA[NETWORK/WCDMA_HANDOVER_FAILURE_RANKING_ANALYSIS/SOURCE_CELL?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=%2B0530&maxRows=500]]></Url>
+   <CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=%2B0530&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/WCDMA_HANDOVER_FAILURE_RANKING_ANALYSIS/SOURCE_CELL&maxRows=0]]></CSVUrl>
+   <JSONVariables>1:jsonRank,3:ratId,4:jsonVendor,5:jsonController,6:cellId,7:jsonFailures</JSONVariables>
+   <Validate>sort{jsonFailures} = desc</Validate>
+   <Validate><![CDATA[jsonRank < 50]]></Validate>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[select count(*) as 'sqlFailuresSoho' from EVENT_E_RAN_HFA_SOHO_ERR_RAW WHERE HIER3_CELL_ID=(SELECT HIER3_CELL_ID FROM DIM_E_SGEH_HIER321_CELL where cell_id='{cellId}'and HIERARCHY_3='{jsonController}'and VENDOR='{jsonVendor}') AND DATETIME_ID >= '2015-03-23 20:00' and DATETIME_ID < '2015-03-24 21:00']]></SqlTest>
+   <SqlTest><![CDATA[select count(*) as 'sqlFailuresIfho' from EVENT_E_RAN_HFA_IFHO_ERR_RAW WHERE HIER3_CELL_ID=(SELECT HIER3_CELL_ID FROM DIM_E_SGEH_HIER321_CELL where cell_id='{cellId}'and HIERARCHY_3='{jsonController}'and VENDOR='{jsonVendor}') AND DATETIME_ID >= '2015-03-23 20:00' and DATETIME_ID < '2015-03-24 21:00']]></SqlTest>
+   <SqlTest><![CDATA[select count(*) as 'sqlFailuresIrat' from EVENT_E_RAN_HFA_IRAT_ERR_RAW WHERE HIER3_CELL_ID=(SELECT HIER3_CELL_ID FROM DIM_E_SGEH_HIER321_CELL where cell_id='{cellId}'and HIERARCHY_3='{jsonController}'and VENDOR='{jsonVendor}') AND DATETIME_ID >= '2015-03-23 20:00' and DATETIME_ID < '2015-03-24 21:00']]></SqlTest>
+   <SqlTest><![CDATA[select count(*) as 'sqlFailuresHsdsch' from EVENT_E_RAN_HFA_HSDSCH_ERR_RAW WHERE HIER3_CELL_ID=(SELECT HIER3_CELL_ID FROM DIM_E_SGEH_HIER321_CELL where cell_id='{cellId}'and HIERARCHY_3='{jsonController}'and VENDOR='{jsonVendor}') AND DATETIME_ID >= '2015-03-23 20:00' and DATETIME_ID < '2015-03-24 21:00']]></SqlTest>
+   <Validate>jsonFailures = sqlFailuresSoho+sqlFailuresIfho+sqlFailuresIrat+sqlFailuresHsdsch</Validate>
+   </RepeatValidation>
+   <RepeatDrillDown instruction="all">2</RepeatDrillDown>
+   <PassToDrillDown id="2">ratId,cellId,jsonFailures,jsonVendor,jsonController</PassToDrillDown>
+</TestCase>
+
+<TestCase id="2">
+   <Precondition>1.jsonFailures > 0</Precondition>
+   <Direction>Drill on Failures</Direction>
+   <Url><![CDATA[NETWORK/WCDMA_HANDOVER_FAILURE_EVENT_SUMMARY/NODE?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=%2B0530&maxRows=500&RAT={1.ratId}&RAN_VENDOR={1.jsonVendor}&RNC_FDN={1.jsonController}&cellId={1.cellId}&type=CELL]]></Url>
+   <CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=%2B0000&RAT={1.ratId}&RAN_VENDOR={1.jsonVendor}&RNC_FDN={1.jsonController}&cellId={1.cellId}&type=CELL&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/WCDMA_HANDOVER_FAILURE_EVENT_SUMMARY/NODE&maxRows=0]]></CSVUrl>
+   <JSONVariables>2:jsonVendor,3:jsonController,4:cellId,5:categoryId,7:jsonFailures,8:jsonSubs</JSONVariables>
+   <Validate>1.jsonFailures = sum{jsonFailures}</Validate>
+   <Validate>sort{jsonFailures} = desc</Validate>
+   <RepeatValidation instruction="all">
+   <SqlTest instruction="Use:categoryId"><![CDATA[select sum(ERR) as 'sqlFailures',count(distinct imsi) as 'sqlSubs' from (select IMSI as IMSI,count(*) as ERR from EVENT_E_RAN_HFA_SOHO_ERR_RAW where HIER3_CELL_ID =(SELECT HIER3_CELL_ID FROM DIM_E_SGEH_HIER321_CELL where cell_id='{cellId}' and  HIERARCHY_3='{jsonController}' and vendor='{jsonVendor}') and  DATETIME_ID >= '2015-03-23 14:30' and DATETIME_ID < '2015-03-23 15:30' group by IMSI) as e]]></SqlTest>
+   <Validate>jsonFailures = sqlFailures, jsonSubs = sqlSubs</Validate>
+   </RepeatValidation>
+   <RepeatDrillDown instruction="all">3</RepeatDrillDown>
+   <PassToDrillDown id="3">cellId,jsonFailures,categoryId,jsonVendor,jsonController</PassToDrillDown>
+</TestCase>
+
+<TestCase id="3">
+   <Precondition>2.jsonFailures > 0</Precondition>
+   <!-- For different category Id, the values of Access Area, RAT and RNC for Source Target occur at different positions on the UI. So we have to put a check on category Id. -->
+   <Precondition>2.categoryId = 0</Precondition>
+   <Precondition>2.categoryId = 1</Precondition>
+   <Direction>Drill on Failures</Direction>
+   <Url><![CDATA[NETWORK/WCDMA_HANDOVER_FAILURE_DETAILED_EVENT_ANALYSIS/NODE?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=%2B0000&maxRows=500&RAN_VENDOR={2.jsonVendor}&RNC_FDN={2.jsonController}&cellId={2.cellId}&categoryId={2.categoryId}&type=CELL]]></Url>
+   <CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=%2B0530&RAN_VENDOR={2.jsonVendor}&RNC_FDN={2.jsonController}&cellId={2.cellId}&categoryId={2.categoryId}&type=CELL&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/WCDMA_HANDOVER_FAILURE_DETAILED_EVENT_ANALYSIS/NODE&maxRows=0]]></CSVUrl>
+   <JSONVariables>1:eventTime,2:jsonImsi,3:jsonTac,4:jsonMake,5:jsonModel,8:cellId,9:ratId,10:jsonVendor,11:jsonController,14:targetCell</JSONVariables>
+   <Validate>2.jsonFailures = count{eventTime}</Validate>
+   <RepeatValidation instruction="all">
+   <SqlTest instruction="Use:2.categoryId"><![CDATA[select isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') as 'sqlMake', isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Unknown') as 'sqlModel' from (select TAC from EVENT_E_RAN_HFA_SOHO_ERR_RAW where IMSI = {jsonImsi} and TAC = {jsonTac} and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) AS rawview, DIM_E_SGEH_TAC WHERE rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+   <Validate>sqlMake = jsonMake, sqlModel = jsonModel</Validate>
+   </RepeatValidation>
+   <RepeatDrillDown instruction="all">4</RepeatDrillDown>
+   <PassToDrillDown id="4">ratId,jsonVendor,jsonController,targetCell</PassToDrillDown>
+</TestCase>
+
+<TestCase id="4">
+   <Precondition>3.targetCell != EMPTY</Precondition>
+   <Direction>Drill on Target Cell</Direction>
+   <Url><![CDATA[NETWORK/WCDMA_HANDOVER_FAILURE_EVENT_SUMMARY/NODE?time={time}&display=grid&tzOffset=%2B0100&maxRows=500&RAT={3.ratId}&RAN_VENDOR={3.jsonVendor}&RNC_FDN={3.jsonController}&cellId={3.targetCell}&type=CELL&cellType=TARGET]]></Url>
+   <CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=%2B0000&RAT={3.ratId}&RAN_VENDOR={3.jsonVendor}&RNC_FDN={3.jsonController}&cellId={3.targetCell}&type=CELL&cellType=TARGET&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/WCDMA_HANDOVER_FAILURE_EVENT_SUMMARY/NODE&maxRows=0]]></CSVUrl>
+   <JSONVariables>2:jsonVendor,3:jsonController,4:cellId,5:categoryId,7:jsonFailures,8:jsonSubs</JSONVariables>
+   <RepeatValidation instruction="all">
+   <Validate>3.targetCell=cellId</Validate>
+   <Validate>sort{jsonFailures} = desc</Validate>
+   <SqlTest><![CDATA[select count(*) as 'sqlFailuresSoho',count(distinct imsi) as 'sqlSubSoho' from EVENT_E_RAN_HFA_SOHO_ERR_RAW where THIER3_CELL_ID=(select HIER3_CELL_ID from DIM_E_SGEH_HIER321_CELL where CELL_ID='{cellId}' and VENDOR='{jsonVendor}' and HIERARCHY_3='{jsonController}') and DATETIME_ID >= '2015-03-31 04:38:00' and DATETIME_ID < '2015-03-31 07:23:00']]></SqlTest>
+   <SqlTest><![CDATA[select count(*) as 'sqlFailuresHsdsch',count(distinct imsi) as 'sqlSubHsdsch' from EVENT_E_RAN_HFA_HSDSCH_ERR_RAW where THIER3_CELL_ID=(select HIER3_CELL_ID from DIM_E_SGEH_HIER321_CELL where CELL_ID='{cellId}' and VENDOR='{jsonVendor}' and HIERARCHY_3='{jsonController}') and DATETIME_ID >= '2015-03-31 04:38:00' and DATETIME_ID < '2015-03-31 07:23:00']]></SqlTest>
+   <SqlTest><![CDATA[select count(*) as 'sqlFailuresIfho',count(distinct imsi) as 'sqlSubIfho' from EVENT_E_RAN_HFA_IFHO_ERR_RAW where THIER3_CELL_ID=(select HIER3_CELL_ID from DIM_E_SGEH_HIER321_CELL where CELL_ID='{cellId}' and VENDOR='{jsonVendor}' and HIERARCHY_3='{jsonController}') and DATETIME_ID >= '2015-03-31 04:38:00' and DATETIME_ID < '2015-03-31 07:23:00']]></SqlTest>
+   <SqlTest><![CDATA[select count(*) as 'sqlFailuresIrat',count(distinct imsi) as 'sqlSubIrat' from EVENT_E_RAN_HFA_IRAT_ERR_RAW where THIER321_ID=(select HIER321_ID from DIM_E_SGEH_HIER321 where HIERARCHY_1='{cellId}' and VENDOR='{jsonVendor}' and HIERARCHY_3='{jsonController}') and DATETIME_ID >= '2015-03-31 04:38:00' and DATETIME_ID < '2015-03-31 07:23:00']]></SqlTest>
+   <Validate>sum{jsonFailures} = sqlFailuresSoho+sqlFailuresHsdsch+sqlFailuresIfho+sqlFailuresIrat</Validate>
+   <Validate>sum{jsonSubs} = sqlSubSoho+sqlSubHsdsch+sqlSubIfho+sqlSubIrat</Validate>
+   </RepeatValidation>
+   <RepeatDrillDown instruction="all">5</RepeatDrillDown>
+   <PassToDrillDown id="5">jsonVendor,jsonController,cellId,categoryId,jsonFailures</PassToDrillDown>
+</TestCase>
+
+<TestCase id="5">
+   <Precondition>4.jsonFailures > 0</Precondition>
+   <!-- For different category Id, the values for  mCC and mNC occur at different positions on the UI. So we have to put a check on category Id. -->
+   <Precondition>4.categoryId = 1</Precondition>
+   <Direction>Drill on Failures</Direction>
+   <Url><![CDATA[NETWORK/WCDMA_HANDOVER_FAILURE_DETAILED_EVENT_ANALYSIS/NODE?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=%2B0100&maxRows=500&RAN_VENDOR={4.jsonVendor}&RNC_FDN={4.jsonController}&cellId={4.cellId}&categoryId={4.categoryId}&type=CELL&cellType=TARGET]]></Url>
+   <CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=%2B0000&RAN_VENDOR={4.jsonVendor}&RNC_FDN={4.jsonController}&cellId={4.cellId}&categoryId={4.categoryId}&type=CELL&cellType=TARGET&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/WCDMA_HANDOVER_FAILURE_DETAILED_EVENT_ANALYSIS/NODE&maxRows=0]]></CSVUrl>
+   <JSONVariables>1:eventTime,2:jsonImsi,3:jsonTac,4:jsonMake,5:jsonModel,14:jsonCellId,10:jsonVendor,11:jsonController,33:mCC,34:mNC</JSONVariables>
+   <Validate>4.jsonFailures = count{eventTime}</Validate>
+   <RepeatValidation instruction="all">
+   <SqlTest instruction="Use:4.categoryId"><![CDATA[select isnull(IMSI_MCC,'') as 'sqlMcc',isnull(IMSI_MNC,'') as 'sqlMnc' from EVENT_E_RAN_HFA_HSDSCH_ERR_RAW raw where THIER3_CELL_ID=(select HIER3_CELL_ID from DIM_E_SGEH_HIER321_CELL where CELL_ID='{jsonCellId}' and VENDOR='{jsonVendor}' and HIERARCHY_3='{jsonController}') and raw.imsi={jsonImsi} and DATETIME_ID >= '2015-03-23 20:00' and DATETIME_ID < '2015-03-23 21:00' and event_time = '{eventTime}']]></SqlTest>
+   <Validate>mCC = sqlMcc, mNC = sqlMnc</Validate>
+   <SqlTest><![CDATA[select isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') as 'sqlMake', isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Unknown') as 'sqlModel' from (select TAC from EVENT_E_RAN_HFA_HSDSCH_ERR_RAW where IMSI = {jsonImsi} and TAC = {jsonTac} and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) AS rawview, DIM_E_SGEH_TAC WHERE rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+   <Validate>sqlMake = jsonMake, sqlModel = jsonModel</Validate>
+   </RepeatValidation>
+</TestCase>
+</TestSuite>

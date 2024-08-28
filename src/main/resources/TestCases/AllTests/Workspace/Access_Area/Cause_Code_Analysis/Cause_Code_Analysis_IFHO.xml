@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite> 
+
+<TestCase id="1">
+<Direction>Launch -> Access Area -> Cause Code Analysis -> HFA (3G) -> Grid View </Direction> 
+<Url><![CDATA[NETWORK/WCDMA_HFA_CAUSE_CODE_ANALYSIS/CAUSE_CODE_GRID?dateFrom=14012015&dateTo=14012015&timeFrom=0500&timeTo=1100&type=CELL&node=82095D,,smartone_R:RNC09:RNC09,Ericsson,3G&display=grid&tzOffset=%2B0000&maxRows=500]]></Url> 
+<JSONVariables>3:Failures,6:CC,7:eventID,8:Category,11:State</JSONVariables>
+<RepeatDrillDown instruction="all">2</RepeatDrillDown>
+	<PassToDrillDown id="2">Failures,CC,eventID,Category,State</PassToDrillDown> 
+</TestCase>
+
+<TestCase id="2">
+<PreCondition>1.Category = 2</PreCondition>
+<Direction>Drill on Cause Code(IFHO) </Direction> 
+<Url><![CDATA[NETWORK/WCDMA_HFA_CAUSE_CODE_ANALYSIS/SUB_CAUSE_CODE_GRID?dateFrom=14012015&dateTo=14012015&timeFrom=0500&timeTo=1100&node=82095D,,smartone_R:RNC09:RNC09,Ericsson,3G&display=grid&tzOffset=%2B0000&maxRows=500&causeCode={1.CC}&eventID={1.eventID}&categoryId={1.Category}&state={1.State}&type=CELL]]></Url> 
+<JSONVariables>3:failuresCC,6:Cause,7:SCC,8:event,9:Category,11:stateCC</JSONVariables>
+<Validate>1.Failures = sum{failuresCC}</Validate>
+<RepeatDrillDown instruction="all">3</RepeatDrillDown>
+	<PassToDrillDown id="3">failuresCC,Cause,SCC,event,Category,stateCC</PassToDrillDown> 
+</TestCase>
+
+<TestCase id="3">
+<Direction>Drill on Sub Cause Code </Direction> 
+<Url><![CDATA[NETWORK/WCDMA_HFA_CAUSE_CODE_ANALYSIS/DETAIL_SUB_CAUSE_CODE_GRID?dateFrom=14012015&dateTo=14012015&timeFrom=0500&timeTo=1100&type=CELL&node=82095D,,smartone_R:RNC09:RNC09,Ericsson,3G&display=grid&tzOffset=%2B0000&maxRows=500&causeCode={2.Cause}&subCauseCode={2.SCC}&eventID={2.event}&categoryId={2.Category}&state={2.stateCC}&type=CELL]]></Url> 
+ 	<SqlTest><![CDATA[select count(EVENT_TIME) as 'sqlFailuresTimes' from EVENT_E_RAN_HFA_IFHO_ERR_RAW where DATETIME_ID >= '2015-01-14 05:00' and DATETIME_ID < '2015-01-14 11:00' and (THIER3_CELL_ID = 445314491996616478 or THIER321_ID = 6668240986967985413 or HIER3_CELL_ID = 445314491996616478) and CAUSE_VALUE = {2.Cause} and sub_cause_value = {2.SCC} and EVENT_ID = {2.event} and category_id = {2.Category}]]></SqlTest> 
+	<Validate>2.failuresCC = sqlFailuresTimes</Validate> 
+</TestCase>
+</TestSuite>

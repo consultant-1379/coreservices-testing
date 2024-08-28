@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+    <TestCase id="1">
+        <Direction>Launch -> Core PS Network -> Data Volume Ranking -> APN GROUP </Direction>
+        <Url><![CDATA[NETWORK/DATAVOL_GROUP_RANKING_ANALYSIS?time=30&display=grid&type=APN&tzOffset=%2B0530&maxRows=500]]></Url>
+        <CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&type=APN&tzOffset=%2B0530&dataTimeFrom=1420719300000&dataTimeTo=1420721100000&userName=admin&url=NETWORK/DATAVOL_GROUP_RANKING_ANALYSIS&maxRows=0]]></CSVUrl>
+        <JSONVariables>1:rank,2:apnGroup,3:totalDataVolume,4:downlinkDataVolume,5:uplinkDataVolume</JSONVariables>
+        <RepeatValidation instruction="all"> 
+            <SqlTest><![CDATA[select convert(numeric(16,2), SUM(convert(numeric(16,2), temp_dt.DATAVOL_DL)/1048576)) as 'sqlDataVolDl', convert(numeric(16,2), SUM(convert(numeric(16,2), temp_dt.DATAVOL_UL)/1048576)) as 'sqlDataVolUl' from ( select APN , DATAVOL_DL ,DATAVOL_UL from dc.EVENT_E_DVTP_DT_RAW where DATETIME_ID >= '2015-01-08 15:20' and DATETIME_ID < '2015-01-08 15:50' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) as temp_dt inner join (select APN from dc.DIM_E_SGEH_APN where LAST_SEEN >= '2014-12-09 00:00' group by APN )as validapn(APN) on (temp_dt.APN = validapn.APN ) ,GROUP_TYPE_E_APN groupref where temp_dt.APN is not null and temp_dt.APN = groupref.APN]]></SqlTest> 
+            <Validate>downlinkDataVolume = sqlDataVolDl,uplinkDataVolume = sqlDataVolUl</Validate> 
+            <Validate>totalDataVolume = sqlDataVolUl + sqlDataVolDl</Validate>
+        </RepeatValidation>
+        <RepeatDrillDown instruction="all">2</RepeatDrillDown>
+<PassToDrillDown id="2">apnGroup</PassToDrillDown>
+    </TestCase>
+    
+    <TestCase id="2">
+        <Direction>Drill on APN GROUP</Direction>
+        <Url><![CDATA[NETWORK/NETWORK_DATAVOL_ANALYSIS?dateFrom=08012015&dateTo=08012015&timeFrom=1805&timeTo=1835&type=APN&groupname={1.apnGroup}&display=grid&tzOffset=%2B0530&maxRows=500]]></Url>
+        <CSVUrl><![CDATA[EniqEventsCSV.jsp?type=APN&groupname={1.apnGroup}&display=grid&tzOffset=%2B0530&dataTimeFrom=1420720500000&dataTimeTo=1420722300000&userName=admin&url=NETWORK/NETWORK_DATAVOL_ANALYSIS&maxRows=0]]></CSVUrl>
+        <JSONVariables>1:TS,2:downlinkMB,3:uplinkMB,4:downlinkThroughPut,5:uplinkThroughPut,6:noOfSubscriber,7:noOfSessions</JSONVariables>
+        <RepeatValidation instruction="all"> 
+            <SqlTest><![CDATA[select convert(numeric(16,2), MAX(convert(numeric(16,2), DATAVOL_DL)/1048576)) as 'sqlDataVolDl',convert(numeric(16,2), MAX(convert(numeric(16,2), DATAVOL_UL)/1048576)) as 'sqlDataVolUl',(convert(numeric(16,2),(convert(numeric(16,2), SUM(temp_dt.DATAVOL_DL))/1048576*8/(convert(numeric(16,2),SUM(temp_dt.DURATION))/1000)))) as 'sqlThroughPutDl',(convert(numeric(16,2),(convert(numeric(16,2), SUM(temp_dt.DATAVOL_UL))/1048576*8/(convert(numeric(16,2),SUM(temp_dt.DURATION))/1000)))) as 'sqlThroughPutUl',(count (distinct(temp_dt.IMSI))) as 'sqlNoOfSubscriber', (count(distinct temp_dt.PDNID_GGSNIP)) as 'sqlNoOfSession' from EVENT_E_DVTP_DT_RAW temp_dt,GROUP_TYPE_E_APN temp_group where DATETIME_ID >= '2015-01-08 11:50' and DATETIME_ID < '2015-01-08 12:20' and temp_dt.APN = temp_group.APN AND temp_group.GROUP_NAME = '{1.apnGroup}']]></SqlTest> 
+            <Validate>downlinkMB = sqlDataVolDl,uplinkMB = sqlDataVolUl,downlinkThroughPut = sqlThroughPutDl,uplinkThroughPut = sqlThroughPutUl,noOfSubscriber = sqlNoOfSubscriber,noOfSessions = sqlNoOfSession</Validate> 
+        </RepeatValidation>
+    </TestCase>
+</TestSuite> 

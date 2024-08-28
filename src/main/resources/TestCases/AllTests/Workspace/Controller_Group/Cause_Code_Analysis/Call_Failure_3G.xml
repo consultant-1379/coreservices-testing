@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+<!-- GridView Launch -->
+<TestCase id="1">
+<Direction>Launch -> Controller Group -> Cause Code Analysis -> CallFailure(3G)</Direction>
+<Url><![CDATA[NETWORK/WCDMA_CAUSE_CODE_ANALYSIS/CAUSE_CODE?time={time}&type=BSC&groupname={-master-RANCFAControllerGroup}&display=grid&tzOffset=%2B0530&maxRows=500]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?type=BSC&groupname={-master-RANCFAControllerGroup}&display=grid&tzOffset=%2B0100&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/WCDMA_CAUSE_CODE_ANALYSIS/CAUSE_CODE&maxRows=0]]></CSVUrl>
+<IgnoredInCsv>5:groupName</IgnoredInCsv>
+<JSONVariables>1:causeCodeId,2:causeIdDesc,3:failures,4:impactedSubscriber,5:groupName</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count(*) as 'sqlFailures' from EVENT_E_RAN_CFA_ERR_RAW where hier3_id=(select hier3_id from GROUP_TYPE_E_RAT_VEND_HIER3 where group_name='{groupName}')and cause_value={causeCodeId} and DATETIME_ID >= '2015-04-13 00:00' and DATETIME_ID < '2015-04-20 00:00']]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+</RepeatValidation>
+<Validate>sort{failures} = desc</Validate>
+<RepeatDrillDown instruction="ALL">2,4</RepeatDrillDown>
+<PassToDrillDown id="2">groupName,failures,causeCodeId,causeIdDesc</PassToDrillDown>
+<PassToDrillDown id="4">groupName,causeCodeId</PassToDrillDown>
+</TestCase>
+
+<TestCase id="2">
+<Direction>Drill on Cause Code</Direction>
+<Url><![CDATA[NETWORK/WCDMA_CAUSE_CODE_ANALYSIS/SUB_CAUSE_CODE?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=%2B0530&maxRows=500&type=BSC&causeCode={1.causeCodeId}&causeCodeDescription={1.causeIdDesc}&groupname={1.groupName}]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=%2B0100&type=BSC&causeCode={1.causeCodeId}&causeCodeDescription={1.causeIdDesc}&groupname={1.groupName}&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/WCDMA_CAUSE_CODE_ANALYSIS/SUB_CAUSE_CODE&maxRows=0]]></CSVUrl>
+<IgnoredInCsv>5:causeCodeId,6:groupName</IgnoredInCsv>
+<JSONVariables>1:subCauseCodeId,2:subCauseCodeIdDesc,3:failures,4:impactedSubscriber,5:causeCodeId,6:groupName</JSONVariables>
+<Validate>1.failures = sum{failures}</Validate>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select EXTENDED_CAUSE_VALUE_DESC as 'sqlSubCauseCodeIdDesc',EXTENDED_CAUSE_VALUE as 'sqlSubCauseCodeId' from DIM_E_RAN_CFA_EXTENDED_CAUSE_VALUE where EXTENDED_CAUSE_VALUE= (select distinct(EXTENDED_CAUSE_VALUE) from EVENT_E_RAN_CFA_ERR_RAW where cause_value={1.causeCodeId} and EXTENDED_CAUSE_VALUE={subCauseCodeId} and DATETIME_ID >= '2015-04-13 00:00' and DATETIME_ID < '2015-04-20 00:00' and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC'))  ]]></SqlTest>
+<Validate>subCauseCodeIdDesc=sqlSubCauseCodeIdDesc,subCauseCodeId=sqlSubCauseCodeId</Validate>
+<SqlTest><![CDATA[select count(*) as 'sqlFailures' from EVENT_E_RAN_CFA_ERR_RAW where hier3_id=(select hier3_id from GROUP_TYPE_E_RAT_VEND_HIER3 where group_name='{groupName}')and cause_value={causeCodeId} and EXTENDED_CAUSE_VALUE={subCauseCodeId} and DATETIME_ID >= '2015-04-13 00:00' and DATETIME_ID < '2015-04-20 00:00']]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">3</RepeatDrillDown>
+<PassToDrillDown id="3">causeCodeId,subCauseCodeId,failures,groupName</PassToDrillDown>
+</TestCase>
+
+<!-- CSV Validation is not possible in this testcase as when eventTime of CSV changes when exported -->
+<TestCase id="3">
+<Precondition>2.failures > 0</Precondition>
+<Direction>Drill on Failures</Direction>
+<Url><![CDATA[NETWORK/WCDMA_CAUSE_CODE_ANALYSIS/DETAIL_SUB_CAUSE_CODE_GRID?dateFrom=14042015&dateTo=21042015&timeFrom=0000&timeTo=0000&display=grid&tzOffset=%2B0530&maxRows=500&type=BSC&causeCodeTitleString=Cause%20Code%20&causeCode={2.causeCodeId}&subcauseCodeTitleString=Sub%20Cause%20Code%20&subCauseCode={2.subCauseCodeId}&groupname={2.groupName}]]></Url>
+<JSONVariables>1:eventTime,2:IMSI,3:TAC,5:TerminalMake,6:TerminalModel</JSONVariables>
+<Validate>2.failures = count{eventTime}</Validate>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select isnull(CAST(rawview.imsi as varchar),' ') as 'sqlIMSI' ,isnull(CAST(rawview.tac as varchar),' ') as 'sqlTAC', case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') else ' ' end as 'sqlMake' , case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Invalid') else ' ' end as 'sqlModel' from(select imsi,TAC from EVENT_E_RAN_CFA_ERR_RAW where imsi = {IMSI} and EVENT_TIME = '{eventTime}' and DATETIME_ID >= '2015-03-19 12:02' and DATETIME_ID < '2015-03-19 12:32' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) as rawview, DIM_E_SGEH_TAC where rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+<Validate>IMSI=sqlIMSI,TAC=sqlTAC,TerminalMake=sqlMake,TerminalModel=sqlModel</Validate>
+</RepeatValidation>
+</TestCase>
+
+<!-- ChartView Launch -->
+<TestCase id="4">
+<Direction>Click on ChartView </Direction>
+<Url><![CDATA[NETWORK/WCDMA_CAUSE_CODE_ANALYSIS/CAUSE_CODE?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&type=BSC&groupname={1.groupName}&display=chart&tzOffset=%2B0100&maxRows=500&causeCodeIds={1.causeCodeId}]]></Url>
+<JSONVariables>1:causeCodeId,2:causeIdDesc,3:failures,4:impactedSubscriber,5:groupName</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count(*) as 'sqlFailures' ,count(distinct IMSI)as 'sqlImpactedSubscriber' from EVENT_E_RAN_CFA_ERR_RAW where hier3_id=(select hier3_id from GROUP_TYPE_E_RAT_VEND_HIER3 where group_name='{groupName}')and cause_value={causeCodeId} and DATETIME_ID >= '2015-08-13 11:00' and DATETIME_ID < '2015-08-13 12:00']]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+<Validate>impactedSubscriber = sqlImpactedSubscriber</Validate>
+</RepeatValidation>
+<Validate>sort{failures} = desc</Validate>
+<RepeatDrillDown instruction="ALL">5</RepeatDrillDown>
+<PassToDrillDown id="5">groupName,failures,causeCodeId,causeIdDesc</PassToDrillDown>
+</TestCase>
+
+<TestCase id="5">
+<Precondition>4.failures > 0</Precondition>
+<Direction>Drill on Cause Code</Direction>
+<Url><![CDATA[NETWORK/WCDMA_CAUSE_CODE_ANALYSIS/SUB_CAUSE_CODE?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&type=BSC&groupname={4.groupName}&display=chart&causeCode={4.causeCodeId}&tzOffset=%2B0100&maxRows=500]]></Url>
+<JSONVariables>1:subCauseCodeId,2:subCauseCodeIdDesc,3:failures,4:impactedSubscriber,5:causeCodeId,6:groupName</JSONVariables>
+<Validate>4.failures = sum{failures}</Validate>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select EXTENDED_CAUSE_VALUE_DESC as 'sqlSubCauseCodeIdDesc',EXTENDED_CAUSE_VALUE as 'sqlSubCauseCodeId' from DIM_E_RAN_CFA_EXTENDED_CAUSE_VALUE where EXTENDED_CAUSE_VALUE= (select distinct(EXTENDED_CAUSE_VALUE) from EVENT_E_RAN_CFA_ERR_RAW where cause_value={causeCodeId} and EXTENDED_CAUSE_VALUE={subCauseCodeId} and DATETIME_ID >= '2015-04-13 00:00' and DATETIME_ID < '2015-04-20 00:00' and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC'))  ]]></SqlTest>
+<Validate>subCauseCodeIdDesc=sqlSubCauseCodeIdDesc,subCauseCodeId=sqlSubCauseCodeId</Validate>
+<SqlTest><![CDATA[select count(*) as 'sqlFailures' from EVENT_E_RAN_CFA_ERR_RAW where hier3_id=(select hier3_id from GROUP_TYPE_E_RAT_VEND_HIER3 where group_name='{groupName}')and cause_value={causeCodeId} and EXTENDED_CAUSE_VALUE={subCauseCodeId} and DATETIME_ID >= '2015-04-13 00:00' and DATETIME_ID < '2015-04-20 00:00']]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+</RepeatValidation>
+</TestCase>
+
+ </TestSuite>

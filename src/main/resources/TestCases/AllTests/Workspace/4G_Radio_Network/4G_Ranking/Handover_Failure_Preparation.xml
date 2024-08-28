@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TestSuite>
+<TestCase id="1">
+<Direction>Launch -> 4G Radio Network -> 4G Ranking -> HandOver Failure Preparation</Direction>
+<Url><![CDATA[SUBSCRIBER/LTE_HANDOVER_FAILURE_SUBSCRIBER_EXEC_RANKING_ANALYSIS/IMSI?time=30&display=grid&tzOffset=%2B0530&maxRows=50]]></Url>
+<JSONVariables>1:rank,2:IMSI,3:failures,4:categoryId</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count (*) as 'sqlFailures' from dc.EVENT_E_LTE_HFA_ERR_RAW where CATEGORY_ID_2 = {categoryId} and imsi= {IMSI} and DATETIME_ID >= '2015-02-02 09:01' and DATETIME_ID < '2015-02-02 09:31' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>	
+<Validate>failures = sqlFailures</Validate>
+<Validate><![CDATA[ rank < 50 ]]></Validate>
+</RepeatValidation>
+<Validate>sort{failures} = desc</Validate>
+</TestCase>
+</TestSuite>

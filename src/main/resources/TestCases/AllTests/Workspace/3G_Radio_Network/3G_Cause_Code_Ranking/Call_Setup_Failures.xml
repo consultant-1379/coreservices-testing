@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<TestCase id="1">
+<Direction> Launch -> 3G Radio Network -> 3G Cause Code Ranking -> Call Setup Failure </Direction>
+<Url><![CDATA[NETWORK/CALL_FAILURE_RANKING_ANALYSIS/CAUSECODE/CALL_SETUP?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=%2B0000]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=%2B0100&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/CALL_FAILURE_RANKING_ANALYSIS/CAUSECODE/CALL_SETUP&maxRows=0]]></CSVUrl>
+<JSONVariables>1:rank,2:causeDesc,3:causeCode,4:failures</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count(*) as 'sqlFailures' from EVENT_E_RAN_CFA_ERR_RAW where DATETIME_ID >= '2015-02-13 15:15' and DATETIME_ID < '2015-02-13 15:30' and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and event_id = {-master-WcdmaCallSetupFailureId} and cause_value = {causeCode}]]></SqlTest>
+<SqlTest><![CDATA[select CAUSE_VALUE_DESC as 'sqlCauseDesc' from DIM_E_RAN_CFA_CAUSE_VALUE where cause_value = {causeCode}]]></SqlTest>
+<Validate>failures = sqlFailures, causeDesc = sqlCauseDesc</Validate>
+<Validate><![CDATA[ rank < 50 ]]></Validate>
+</RepeatValidation>
+<Validate>sort{failures} = desc</Validate>
+<RepeatDrillDown instruction="ALL">2</RepeatDrillDown>
+<PassToDrillDown id="2">causeDesc,causeCode,failures</PassToDrillDown>
+</TestCase>
+
+<TestCase id="2">
+<Precondition>1.failures > 0</Precondition>
+<Direction> Drill on Cause Code </Direction>
+<Url><![CDATA[NETWORK/CALL_FAILURE_DETAILED_EVENT_ANALYSIS/CAUSECODE/CALL_SETUP?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&CAUSE_CODE_DESCRIPTION={1.causeDesc}&CAUSE_VALUE={1.causeCode}&display=grid&tzOffset=%2B0100]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?CAUSE_CODE_DESCRIPTION={1.causeDesc}&CAUSE_VALUE={1.causeCode}&display=grid&tzOffset=%2B0100&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=NETWORK/CALL_FAILURE_DETAILED_EVENT_ANALYSIS/CAUSECODE/CALL_SETUP&maxRows=0]]></CSVUrl>
+<JSONVariables>1:extCauseCode,2:extCauseDesc,3:extFailures,4:impactedSubscibers</JSONVariables>
+<Validate>1.failures = sum{extFailures}</Validate>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count(*) as 'sqlExtFailures', count( distinct imsi) as 'sqlImpactedSubs' from EVENT_E_RAN_CFA_ERR_RAW where DATETIME_ID >= '2015-02-13 15:15' and DATETIME_ID < '2015-02-13 15:30' and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and event_id = {-master-WcdmaCallSetupFailureId} and cause_value = {1.causeCode} and extended_cause_value = {extCauseCode}]]></SqlTest>
+<SqlTest><![CDATA[select EXTENDED_CAUSE_VALUE_DESC as 'sqlExtCauseDesc' from DIM_E_RAN_CFA_EXTENDED_CAUSE_VALUE where EXTENDED_CAUSE_VALUE = {extCauseCode}]]></SqlTest>
+<Validate>extFailures = sqlExtFailures, impactedSubscibers = sqlImpactedSubs, extCauseDesc = sqlExtCauseDesc</Validate>
+</RepeatValidation>
+<Validate>sort{extCauseCode} = asc</Validate>
+</TestCase>
+</TestSuite>

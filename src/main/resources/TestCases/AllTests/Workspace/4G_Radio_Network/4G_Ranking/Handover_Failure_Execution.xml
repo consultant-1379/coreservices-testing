@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+<TestCase id="1">
+<Direction>Launch -> 4G Radio Network -> 4G Ranking -> HandOver Failure Execution</Direction>
+<Url><![CDATA[SUBSCRIBER/LTE_HANDOVER_FAILURE_SUBSCRIBER_EXEC_RANKING_ANALYSIS/IMSI?time={time}&display=grid&tzOffset=%2B0530&maxRows=50]]></Url>
+<JSONVariables>1:rank,2:IMSI,3:failures,4:categoryId</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count (*) as 'sqlFailures' from dc.EVENT_E_LTE_HFA_ERR_RAW where CATEGORY_ID_2 = {categoryId} and imsi= {IMSI} and DATETIME_ID >= '2015-02-02 09:01' and DATETIME_ID < '2015-02-02 09:31' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') group by imsi]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+<Validate><![CDATA[ rank < 50 ]]></Validate>
+</RepeatValidation>
+<Validate>sort{failures} = desc</Validate>
+<RepeatDrillDown instruction="all">2</RepeatDrillDown>
+<PassToDrillDown id="2">IMSI,failures</PassToDrillDown>
+</TestCase>
+
+<TestCase id="2">
+<PreCondition>1.IMSI != EMPTY</PreCondition>
+<Direction>Drill on IMSI</Direction>
+<Url><![CDATA[SUBSCRIBER/LTE_HANDOVER_FAILURE_SUBSCRIBER_EVENT_SUMMARY_ANALYSIS/IMSI?time={time}&type=IMSI&imsi={1.IMSI}&display=grid&tzOffset=%2B0530&maxRows=500]]></Url>
+<JSONVariables>1:IMSI,2:type,3:categoryId,4:failures</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count(*) as 'sqlFailures' from dc.EVENT_E_LTE_HFA_ERR_RAW where DATETIME_ID >= '2015-02-02 00:00' and DATETIME_ID < '2015-02-09 00:00' and imsi={IMSI}  and CATEGORY_ID_2={categoryId}]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+</RepeatValidation>
+<Validate>sort{failures} = desc</Validate>
+<RepeatDrillDown instruction="all">3</RepeatDrillDown>
+<PassToDrillDown id="3">categoryId,IMSI,failures</PassToDrillDown>
+</TestCase>
+
+<TestCase id="3">
+<Direction>Drill on Preparation/Execution</Direction>
+<Url><![CDATA[SUBSCRIBER/LTE_HANDOVER_FAILURE_SUBSCRIBER_EVENT_SUMMARY_ANALYSIS/CATEGORY_ID?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=%2B0530&maxRows=500&imsi={2.IMSI}&categoryId={2.categoryId}]]></Url>
+<JSONVariables>1:IMSI,2:eventId,3:eventDesc,4:failures</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count(*) as 'sqlFailures' from dc.EVENT_E_LTE_HFA_ERR_RAW where Category_ID_2={2.categoryId} and DATETIME_ID >= '2015-02-02 00:00' and DATETIME_ID < '2015-02-09 00:00'  and event_id = {eventId} and imsi={2.IMSI} and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+</RepeatValidation>
+<Validate>sort{failures} = desc</Validate>
+<RepeatDrillDown instruction="all">4</RepeatDrillDown>
+<PassToDrillDown id="4">eventId,failures,IMSI</PassToDrillDown>
+</TestCase>
+
+<TestCase id="4">
+<PreCondition>3.failures > 0</PreCondition>
+<Direction>Drill on Failures</Direction>
+<Url><![CDATA[SUBSCRIBER/LTE_HANDOVER_FAILURE_SUBSCRIBER_DETAILED_EVENT_ANALYSIS/IMSI?time={time}&display=grid&tzOffset=%2B0530&maxRows=500&imsi={3.IMSI}&eventID={3.eventId}]]></Url>
+<JSONVariables>1:hierThreeId,2:hierThreeTwoOneId,5:eventTime,7:IMSI,8:TAC,9:TerminalMake,10:TerminalModel,11:EventId</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select rawview.imsi as 'sqlIMSI' ,rawview.hier3_id as 'hierThreeId',rawview.event_id as 'sqlEventid', rawview.tac as 'sqlTac',case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') else ' ' end as 'sqlMake' , case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Invalid') else ' ' end as 'sqlModel' from(select imsi,hier3_id,event_id, TAC from EVENT_E_LTE_HFA_ERR_RAW where imsi = {3.IMSI} and hier3_id={hierThreeId} and EVENT_ID = {3.eventId}  and EVENT_TIME = '{eventTime}' and DATETIME_ID >= '2015-03-19 12:02' and DATETIME_ID < '2015-03-19 12:32' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) as rawview, DIM_E_SGEH_TAC where rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+<Validate>IMSI = sqlIMSI,hierThreeId = hierThreeId, 3.eventId = sqlEventid,TAC=sqlTac,TerminalMake=sqlMake,TerminalModel=sqlModel</Validate>
+</RepeatValidation>
+<Validate>3.failures = count{eventTime}</Validate>
+</TestCase>
+</TestSuite>
+

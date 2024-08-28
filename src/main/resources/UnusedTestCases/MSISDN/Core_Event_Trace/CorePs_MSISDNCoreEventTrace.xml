@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TestSuite>
+	<TestCase id="1">
+		<Direction>Launch -> MSISDN-> Core Event Trace -> Core PS</Direction> 
+		<Url><![CDATA[SUBSCRIBER/EVENT_ANALYSIS?time=30&type=MSISDN&msisdn={-master-msisdn-}&display=grid&key=TOTAL&tzOffset=+0000&maxRows=500]]></Url> 
+		<JSONVariables>1:eventTime,3:tac,4:terminalMake,5:terminalModel,6:eventIdDesc,7:eventResDesc,8:causeProtDesc,9:causeCodeID,10:causeCodeDesc,11:subCauseCodeID,12:subCauseCodeDesc,13:sgsnMme,14:ratDesc,15:controller,17:accessArea,18:vendor,56:apn,75:ratId</JSONVariables>
+		<CSVUrl><![CDATA[EniqEventsCSV.jsp?type=MSISDN&msisdn={-master-msisdn-}&display=grid&key=TOTAL&tzOffset=+0000&dataTimeFrom=1415544480000&dataTimeTo=1415546280000&userName=admin&url=SUBSCRIBER/EVENT_ANALYSIS&maxRows=0]]></CSVUrl>
+		<IgnoredInCsv>71:sysCauseCode,72:sysSubcause,73:sysEventRes,74:sysCauseProt</IgnoredInCsv>
+		<RepeatValidation instruction="all"> 
+			<SqlTest instruction="Use:ratId"><![CDATA[SELECT tac AS 'sqlTac', event_source_name AS 'sqlEventSourceName', rat AS 'sqlRatID', hierarchy_3 AS 'sqlHierarchyThree', hierarchy_1 AS 'sqlHierarchyOne', event_id AS 'sqlEventID', raw.vendor AS 'sqlVendor', cause_code AS 'sqlCauseCode', subcause_code AS 'sqlSubCauseCode', hierarchy_1 AS 'sqlAccessArea', hierarchy_3 AS 'sqlController' FROM event_e_lte_err_raw raw, DIM_E_IMSI_MSISDN imsi_map WHERE raw.imsi = imsi_map.imsi and imsi_map.MSISDN = {-master-msisdn-} AND tac = {tac} AND event_time = '{eventTime}' AND cause_code = {causeCodeID} AND subcause_code = {subCauseCodeID} AND hierarchy_1 = '{accessArea}' AND hierarchy_3 = '{controller}' AND DATETIME_ID >= '2014-03-06 09:30' AND DATETIME_ID < '2014-03-06 10:00']]></SqlTest>
+			<Validate>tac = sqlTac,sgsnMme = sqlEventSourceName,ratId = sqlRatID,controller = sqlHierarchyThree,accessArea = sqlHierarchyOne,vendor = sqlVendor, causeCodeID = sqlCauseCode</Validate>
+		</RepeatValidation> 
+		<SqlTest instruction="plus:sgeh"><![CDATA[select count(*) as 'sqlFailures' from EVENT_E_LTE_ERR_RAW raw, DIM_E_IMSI_MSISDN imsi_map where imsi_map.MSISDN = {-master-msisdn-} and raw.imsi = imsi_map.imsi and DATETIME_ID >= '2014-11-09 12:14' and DATETIME_ID < '2014-11-09 12:44' and TAC not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and raw.EVENT_ID is not null]]></SqlTest>
+		<Validate>sqlFailures = count{eventTime}</Validate>
+		<RepeatDrillDown instruction="all">2,3,5,7,9,11,13,15</RepeatDrillDown> 
+		<PassToDrillDown id="2">failures,eventIdNode,eventIdFromEventIdNode</PassToDrillDown>
+	</TestCase>
+</TestSuite>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+<TestCase id="1">
+   <Direction>Launch -> 3G Radio Network -> 3G Terminal Group Analysis -> Handover Failure (Most HSDSCH Failures)</Direction>
+   <Url><![CDATA[TERMINAL/WCDMA_HANDOVER_FAILURE_TERMINAL_GROUP_ANALYSIS/MOST_HSDSCH_FAILURES?time={date}&display=chart&tzOffset=%2B0100&maxRows=500]]></Url>
+   <JSONVariables>1:jsonRank,2:jsonGroup,3:jsonFailures,4:jsonImpactedSubs,5:jsonCategoryId</JSONVariables>
+   <Validate><![CDATA[jsonRank < 50]]></Validate>
+   <Validate>sort{jsonRank} = asc</Validate>
+   <Validate>sort{jsonFailures} = desc</Validate>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[select count(*) AS 'sqlFailures', count(distinct IMSI) as 'sqlImpactedSubs' from EVENT_E_RAN_HFA_HSDSCH_ERR_RAW where DATETIME_ID >= '2015-03-26 12:20' and DATETIME_ID < '2015-03-26 12:50' and ISNULL(TAC,-1) not in (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and CATEGORY_ID = {jsonCategoryId} and TAC IN (select TAC from GROUP_TYPE_E_TAC where GROUP_NAME = '{jsonGroup}')]]></SqlTest>
+   <Validate>jsonFailures = sqlFailures, jsonImpactedSubs = sqlImpactedSubs</Validate>
+   </RepeatValidation>
+   <RepeatDrillDown instruction="all">2</RepeatDrillDown>
+   <PassToDrillDown id="2">jsonGroup,jsonFailures,jsonCategoryId</PassToDrillDown>
+</TestCase>
+
+<TestCase id="2">
+   <Precondition>1.jsonFailures > 0</Precondition>
+   <Direction>Drill on Failures</Direction>
+   <Url><![CDATA[TERMINAL/WCDMA_HANDOVER_FAILURE_TERMINAL_GROUP_ANALYSIS/MOST_HSDSCH_FAILURES?time={date}&groupname={1.jsonGroup}&display=grid&tzOffset=%2B0100&maxRows=500]]></Url>
+   <CSVUrl><![CDATA[EniqEventsCSV.jsp?groupname={1.jsonGroup}&display=grid&tzOffset=%2B0100&dataTimeFrom={datetime}&dataTimeTo={datetime}&userName=admin&url=TERMINAL/WCDMA_HANDOVER_FAILURE_TERMINAL_GROUP_ANALYSIS/MOST_HSDSCH_FAILURES&maxRows=0]]></CSVUrl>
+   <JSONVariables>1:eventTime,2:jsonIMSI,3:jsonTac,4:jsonMake,5:jsonModel,29:jsonMCC,30:jsonMNC</JSONVariables>
+   <Validate>1.jsonFailures=count{eventTime}</Validate>
+   <RepeatValidation instruction="all">
+   <SqlTest><![CDATA[select isnull(IMSI_MCC,' ') as 'sqlMCC',isnull(IMSI_MNC,' ') as 'sqlMNC' from EVENT_E_RAN_HFA_HSDSCH_ERR_RAW where TAC = {jsonTac} and IMSI={jsonIMSI} and DATETIME_ID >= '2015-03-23 23:30' and DATETIME_ID < '2015-03-24 23:30' and TAC is not null]]></SqlTest>
+   <Validate>jsonMCC=sqlMCC,jsonMNC=sqlMNC</Validate>
+   <SqlTest><![CDATA[select isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') as 'sqlMake', isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Unknown') as 'sqlModel' from (select TAC from EVENT_E_RAN_HFA_HSDSCH_ERR_RAW where IMSI={jsonIMSI} and event_time = '{eventTime}' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) AS rawview, DIM_E_SGEH_TAC WHERE rawview.TAC *= DIM_E_SGEH_TAC.TAC]]></SqlTest>
+   <Validate>jsonMake = sqlMake, jsonModel = sqlModel</Validate>
+   </RepeatValidation>
+</TestCase>
+
+</TestSuite>

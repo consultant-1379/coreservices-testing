@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+
+<TestCase id="1">
+<Direction>Launch -> 4G Radio Network -> 4G Ranking -> Call Drops By Controller</Direction>
+<Url><![CDATA[NETWORK/LTE_CALL_FAILURE_RANKING_ANALYSIS/ENODEB/CALL_DROP?dateFrom={date}&dateTo={date}&timeFrom={time}&timeTo={time}&display=grid&tzOffset=+0530&maxRows=50]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=%2B0530&dataTimeFrom={time}&dataTimeTo={time}&userName=admin&url=NETWORK/LTE_CALL_FAILURE_RANKING_ANALYSIS/ENODEB/CALL_DROP&maxRows=0]]></CSVUrl>
+ <IgnoredInCsv>1:hierThreeId,6:rat</IgnoredInCsv>
+<JSONVariables>1:hierThreeId,2:rank,3:ranVendor,4:controller,5:failures,6:rat</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count(*) as 'sqlFailures' from dc.EVENT_E_LTE_CFA_ERR_RAW where HIER3_ID = {hierThreeId} and CATEGORY_ID = 0 and DATETIME_ID >= '2015-02-10 12:31' and DATETIME_ID < '2015-02-10 13:01'and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+<Validate><![CDATA[ rank < 50 ]]></Validate>
+</RepeatValidation>
+<Validate>sort{rank} = asc</Validate>
+<Validate>sort{failures} = desc</Validate>
+<RepeatDrillDown instruction="all">2</RepeatDrillDown>
+<PassToDrillDown id="2">hierThreeId</PassToDrillDown>
+</TestCase>
+
+<TestCase id="2">
+<Direction>Drill on Controller</Direction>
+<Url><![CDATA[NETWORK/LTE_CALL_FAILURE_EVENT_SUMMARY/NODE?time={time}&HIER3_ID={1.hierThreeId}&type=BSC&display=grid&tzOffset=+0530&maxRows=500]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?HIER3_ID={1.hierThreeId}&type=BSC&display=grid&tzOffset=%2B0530&dataTimeFrom={time}&dataTimeTo={time}&userName=admin&url=NETWORK/LTE_CALL_FAILURE_EVENT_SUMMARY/NODE&maxRows=0]]></CSVUrl>
+ <IgnoredInCsv>1:hierThreeId,2:categoryId</IgnoredInCsv>
+<JSONVariables>1:hierThreeId,2:categoryId,3:ranVendor,4:controller,6:failures,7:impactedSubs</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count(*) as 'sqlFailures', count(distinct IMSI) as 'sqlimpactedSubs' from dc.EVENT_E_LTE_CFA_ERR_RAW where HIER3_ID = {hierThreeId} and CATEGORY_ID = {categoryId} and DATETIME_ID >= '2015-02-10 12:31' and DATETIME_ID < '2015-02-10 13:01'and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+<Validate>impactedSubs = sqlimpactedSubs</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">3</RepeatDrillDown>
+<PassToDrillDown id="3">hierThreeId,categoryId</PassToDrillDown>
+</TestCase>
+
+<TestCase id="3">
+<Direction>Drill on Failure Category</Direction>
+<Url><![CDATA[NETWORK/LTE_CALL_FAILURE_EVENT_SUMMARY/CATEGORISED_ENODEB?time={time}&display=grid&tzOffset=%2B0530&maxRows=500&HIER3_ID={2.hierThreeId}&CATEGORY_ID={2.categoryId}]]></Url>
+<CSVUrl><![CDATA[EniqEventsCSV.jsp?display=grid&tzOffset=%2B0530&HIER3_ID={2.hierThreeId}&CATEGORY_ID={2.categoryId}&dataTimeFrom={time}&dataTimeTo={time}&userName=admin&url=NETWORK/LTE_CALL_FAILURE_EVENT_SUMMARY/CATEGORISED_ENODEB&maxRows=0]]></CSVUrl>
+ <IgnoredInCsv>1:hierThreeId,5:eventId</IgnoredInCsv>
+<JSONVariables>1:hierThreeId,2:ranVendor,3:controller,4:eventType,5:eventId,6:failures,7:impactedSubs</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select count(*) as 'sqlFailures', count(distinct IMSI) as 'sqlimpactedSubs' from dc.EVENT_E_LTE_CFA_ERR_RAW where HIER3_ID = {hierThreeId} and EVENT_ID={eventId} and DATETIME_ID >= '2015-02-10 12:31' and DATETIME_ID < '2015-02-10 13:01'and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+<Validate>impactedSubs = sqlimpactedSubs</Validate>
+</RepeatValidation>
+<RepeatDrillDown instruction="all">4</RepeatDrillDown>
+<PassToDrillDown id="4">hierThreeId,eventId,failures</PassToDrillDown>
+</TestCase>
+
+<TestCase id="4">
+<Direction>Drill on Failures</Direction>
+<Precondition>3.failures>0</Precondition><!-- csv export validation for detailed window will be cover under jiraNO:EQEV-26708 -->
+<Url><![CDATA[NETWORK/LTE_CALL_FAILURE_DETAILED_EVENT_ANALYSIS/ENODEB?time={time}&display=grid&tzOffset=%2B0530&maxRows=500&HIER3_ID={3.hierThreeId}&eventID={3.eventId}]]></Url>
+<JSONVariables>1:hierThreeId,3:eventTime,5:IMSI,6:TAC,7:terminalMake,8:terminalModel,9:eventId,10:eventType</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select isnull(cast(rawview.IMSI as varchar), ' ') as 'sqlIMSI' , isnull(cast(rawview.tac as varchar), ' ') as 'sqlTac', case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.VENDOR_NAME, 'Manufacturer Invalid') else ' ' end as 'sqlMake' , case when (rawview.TAC IS NOT NULL AND rawview.TAC <> 0) then isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Unknown') WHEN (rawview.TAC = 0) THEN isnull(DIM_E_SGEH_TAC.MARKETING_NAME, 'Model Invalid') else ' ' end as 'sqlModel'  from (select IMSI,tac from EVENT_E_LTE_CFA_ERR_RAW as rawview where event_time = '{eventTime}' and hier3_id = {hierThreeId} and IMSI={IMSI} and EVENT_ID = {eventId} and DATETIME_ID >= '2015-02-10 16:51' and DATETIME_ID < '2015-02-10 17:51' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC')) AS rawview, DIM_E_SGEH_TAC WHERE rawview.TAC *= DIM_E_SGEH_TAC.TAC ]]></SqlTest>
+<Validate> IMSI = sqlIMSI,terminalMake = sqlMake ,terminalModel = sqlModel,TAC = sqlTac </Validate>
+</RepeatValidation>
+<Validate>3.failures = count{eventTime}</Validate>
+</TestCase>
+
+</TestSuite>

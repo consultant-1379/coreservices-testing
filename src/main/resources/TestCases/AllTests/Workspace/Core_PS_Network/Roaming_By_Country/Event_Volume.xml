@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestSuite>
+<TestCase id="1">
+<Direction>Launch -> Core(PS) Network -> Roaming By Country -> Event Volume</Direction>
+<Url><![CDATA[NETWORK/ROAMING_ANALYSIS/COUNTRY?time=30&display=chart&tzOffset=%2B0530&maxRows=500]]></Url>
+<JSONVariables>1:country,2:failures,3:successes,4:roamingSubs,5:mcc</JSONVariables>
+<RepeatValidation instruction="all">
+<SqlTest><![CDATA[select distinct isnull(COUNTRY,' ') as 'sqlCountry' from DIM_E_SGEH_MCCMNC where MCC='{mcc}']]></SqlTest>
+<Validate>country = sqlCountry</Validate>
+<SqlTest><![CDATA[select isnull(count(*),0) as 'sqlFailures' from (select IMSI , IMSI_MCC from dc.EVENT_E_SGEH_ERR_RAW where DATETIME_ID >= '2015-08-19 08:45' and DATETIME_ID < '2015-08-20 10:45' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and ROAMING = 1 union all select IMSI ,IMSI_MCC from dc.EVENT_E_LTE_ERR_RAW where DATETIME_ID >= '2015-08-19 08:45' and DATETIME_ID < '2015-08-20 10:45' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and ROAMING = 1 ) as temp_err where IMSI_MCC='{mcc}' group by IMSI_MCC]]></SqlTest>
+<Validate>failures = sqlFailures</Validate>
+<SqlTest><![CDATA[SELECT sum(isnull(NO_OF_SUCCESSES,0)) as 'sqlSuccesses' from (SELECT sum(NO_OF_SUCCESSES) as  NO_OF_SUCCESSES FROM dc.EVENT_E_LTE_IMSI_SUC_RAW where IMSI_MCC='{mcc}' and DATETIME_ID >= '2015-08-19 08:45' and DATETIME_ID < '2015-08-20 10:45' union all  SELECT sum(NO_OF_SUCCESSES) as NO_OF_SUCCESSES FROM dc.EVENT_E_SGEH_IMSI_SUC_RAW where IMSI_MCC='{mcc}' and DATETIME_ID >= '2015-08-19 08:45' and DATETIME_ID < '2015-08-20 10:45') as temp_suc]]></SqlTest>
+<Validate>successes = sqlSuccesses</Validate>
+<SqlTest><![CDATA[select max(isnull(roamers.NO_OF_TOTAL_ROAMERS, 0)) as 'sqlRoamers' from (select IMSI_MCC, count(distinct(IMSI)) from (select IMSI, IMSI_MCC from dc.EVENT_E_SGEH_ERR_RAW where DATETIME_ID >= '2015-08-19 08:45' and DATETIME_ID < '2015-08-20 10:45' and IMSI_MCC='{mcc}' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and ROAMING = 1 union all select IMSI,IMSI_MCC from dc.EVENT_E_LTE_ERR_RAW where DATETIME_ID >= '2015-08-19 08:45' and DATETIME_ID < '2015-08-20 10:45' and ISNULL(TAC,-1) not in (select TAC from dc.GROUP_TYPE_E_TAC where GROUP_NAME = 'EXCLUSIVE_TAC') and ROAMING = 1 and IMSI_MCC='{mcc}') as temp_all_tables group by IMSI_MCC)as roamers (IMSI_MCC,NO_OF_TOTAL_ROAMERS)]]></SqlTest>
+<Validate>roamingSubs = sqlRoamers</Validate>
+</RepeatValidation>
+</TestCase>
+</TestSuite>
